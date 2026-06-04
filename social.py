@@ -80,6 +80,56 @@ def is_configured():
     return bool(get_page_token() and META_PAGE_ID)
 
 
+def derive_debug():
+    """
+    Verbose step-by-step derivation of a PERMANENT page token from META_USER_TOKEN.
+    Returns each step's outcome + the final permanent page token (to store as META_ACCESS_TOKEN).
+    """
+    out = {"has_user_token": bool(META_USER_TOKEN), "has_app_secret": bool(APP_SECRET),
+           "page_id": META_PAGE_ID}
+
+    # Step 0: check token validity + expiry via debug_token
+    try:
+        app_token = f"{APP_ID}|{APP_SECRET}"
+        dbg = requests.get(f"{GRAPH}/debug_token",
+                           params={"input_token": META_USER_TOKEN, "access_token": app_token},
+                           timeout=20).json().get("data", {})
+        out["token_is_valid"] = dbg.get("is_valid")
+        out["token_expires_at"] = dbg.get("expires_at")
+        out["token_type"] = dbg.get("type")
+    except Exception as e:
+        out["debug_token_error"] = str(e)
+
+    # Step 1: exchange for long-lived
+    try:
+        long_token = _exchange_for_long_lived(META_USER_TOKEN)
+        out["long_lived_exchange_ok"] = bool(long_token)
+    except Exception as e:
+        out["long_lived_exchange_ok"] = False
+        out["exchange_error"] = str(e)
+        long_token = None
+
+    use_token = long_token or META_USER_TOKEN
+
+    # Step 2: get page token from /me/accounts
+    try:
+        r = requests.get(f"{GRAPH}/me/accounts",
+                         params={"access_token": use_token, "fields": "id,name,access_token"},
+                         timeout=20).json()
+        if "error" in r:
+            out["me_accounts_error"] = r["error"]
+        pages = r.get("data", [])
+        out["pages_found"] = [{"id": p.get("id"), "name": p.get("name")} for p in pages]
+        for p in pages:
+            if p.get("id") == META_PAGE_ID:
+                out["permanent_page_token"] = p.get("access_token")
+                out["SUCCESS"] = True
+    except Exception as e:
+        out["me_accounts_exception"] = str(e)
+
+    return out
+
+
 def post_to_facebook(message, link=None):
     """
     Post a text update (optionally with a link) to the Facebook Page.

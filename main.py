@@ -424,6 +424,12 @@ async def trigger_social(slot: str):
     return run_social_post(slot)
 
 
+@app.get("/social/derive-debug")
+async def derive_debug():
+    """Verbose token derivation — shows where it fails + the permanent page token to store."""
+    return social.derive_debug()
+
+
 @app.get("/social/token-scopes")
 async def token_scopes():
     """Show which permissions the configured token actually has (via debug_token)."""
