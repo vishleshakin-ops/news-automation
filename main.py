@@ -430,6 +430,22 @@ async def derive_debug():
     return social.derive_debug()
 
 
+@app.get("/debug/data")
+async def debug_data():
+    """Diagnose market-data fetch on Railway: curl_cffi status + live macro result."""
+    out = {"curl_cffi_available": daily_posts._cffi is not None}
+    try:
+        macro = daily_posts.get_macro()
+        out["macro_keys"] = list(macro.keys())
+        out["nifty"] = macro.get("^NSEI")
+        out["ok"] = bool(macro)
+    except Exception as e:
+        import traceback
+        out["error"] = str(e)
+        out["trace"] = traceback.format_exc()[-800:]
+    return out
+
+
 @app.get("/social/token-scopes")
 async def token_scopes():
     """Show which permissions the configured token actually has (via debug_token)."""
