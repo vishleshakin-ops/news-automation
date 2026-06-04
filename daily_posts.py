@@ -15,13 +15,29 @@ The 5 posts:
   5) 6:00 PM  Tomorrow's Watchlist  — Nifty levels + stocks + sector to watch + global cues
 """
 import os
+import time
 from datetime import datetime
 import pytz
 import yfinance as yf
 
+try:
+    from curl_cffi import requests as _cffi  # browser impersonation — bypasses Yahoo IP block
+except ImportError:
+    _cffi = None
+
 import news_source
 import social
 import image_gen
+
+
+def _yf_session():
+    """curl_cffi session impersonating Chrome — lets Yahoo accept cloud-IP requests."""
+    if _cffi is None:
+        return None
+    try:
+        return _cffi.Session(impersonate="chrome")
+    except Exception:
+        return None
 
 INDIA_TZ = pytz.timezone("Asia/Kolkata")
 SITE_LINK = "https://vishleshak.in/news"
@@ -48,23 +64,29 @@ MACRO = {"Nifty": "^NSEI", "Sensex": "^BSESN", "Gold": "GC=F", "Silver": "SI=F",
 # ----------------------------------------------------------------------------
 # DATA HELPERS (Yahoo Finance — unlimited)
 # ----------------------------------------------------------------------------
-def _pct_change(symbols):
-    """Return {symbol: {'price':float,'pct':float}} from last 2 daily closes."""
-    out = {}
-    try:
-        data = yf.download(" ".join(symbols), period="3d", interval="1d",
-                           group_by="ticker", progress=False)
-        for s in symbols:
-            try:
-                closes = data[s]["Close"].dropna()
-                if len(closes) >= 2:
-                    prev, cur = float(closes.iloc[-2]), float(closes.iloc[-1])
-                    out[s] = {"price": cur, "pct": ((cur - prev) / prev) * 100}
-            except Exception:
-                continue
-    except Exception as e:
-        print(f"_pct_change error: {e}")
-    return out
+def _pct_change(symbols, retries=3):
+    """Return {symbol: {'price':float,'pct':float}} from last 2 daily closes.
+    Retries with a browser-impersonation session (Yahoo blocks plain cloud IPs)."""
+    for attempt in range(retries):
+        try:
+            data = yf.download(" ".join(symbols), period="5d", interval="1d",
+                               group_by="ticker", progress=False, session=_yf_session())
+            out = {}
+            for s in symbols:
+                try:
+                    closes = data[s]["Close"].dropna()
+                    if len(closes) >= 2:
+                        prev, cur = float(closes.iloc[-2]), float(closes.iloc[-1])
+                        out[s] = {"price": cur, "pct": ((cur - prev) / prev) * 100}
+                except Exception:
+                    continue
+            if out:
+                return out
+            print(f"_pct_change attempt {attempt+1}: empty result, retrying...")
+        except Exception as e:
+            print(f"_pct_change attempt {attempt+1} error: {e}")
+        time.sleep(2)
+    return {}
 
 
 def get_movers():
@@ -281,6 +303,15 @@ def run_post(slot, public_base_url=None):
         return {"ok": False, "error": f"build failed: {e}"}
 
     result = {"slot": slot, "title": post["title"]}
+
+    # SAFETY GUARD — never post a blank card if data fetch failed
+    content_lines = [l for l in post.get("ig_lines", []) if l.strip()]
+    if len(content_lines) < 2:
+        result["skipped"] = True
+        result["reason"] = "no market data (Yahoo unavailable) — skipped to avoid blank post"
+        print(f"[SOCIAL {slot}] SKIPPED — no data")
+        return result
+
     caption = post["fb_text"]
 
     # --- Generate the branded card image once, host it for both platforms ---
