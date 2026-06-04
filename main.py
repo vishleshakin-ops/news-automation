@@ -423,6 +423,21 @@ async def trigger_social(slot: str):
         raise HTTPException(status_code=404, detail=f"Unknown slot. Use: {list(daily_posts.POST_BUILDERS)}")
     return run_social_post(slot)
 
+
+@app.get("/social/diagnose")
+async def diagnose_social():
+    """Diagnose Meta token setup. Shows whether a page token resolves + the IG account id."""
+    token = social.get_page_token()
+    ig_id = social.fetch_ig_user_id() if token else None
+    return {
+        "page_id": social.META_PAGE_ID,
+        "page_token_resolved": bool(token),
+        "instagram_business_account_id": ig_id,
+        "instagram_env_set": bool(social.META_IG_USER_ID),
+        "hint": "If page_token_resolved is true, Facebook posting will work. "
+                "Copy instagram_business_account_id into Railway as META_IG_USER_ID to enable Instagram.",
+    }
+
 # ============================================================================
 # STATIC FILES
 # ============================================================================

@@ -16,14 +16,68 @@ import requests
 
 GRAPH = "https://graph.facebook.com/v21.0"
 
-META_ACCESS_TOKEN = os.getenv("META_ACCESS_TOKEN")
+META_ACCESS_TOKEN = os.getenv("META_ACCESS_TOKEN")   # direct page/system-user token (optional)
 META_PAGE_ID = os.getenv("META_PAGE_ID")
 META_IG_USER_ID = os.getenv("META_IG_USER_ID")
 
+# For auto-deriving a PERMANENT page token from a user token (recommended path)
+APP_ID = os.getenv("META_APP_ID", "969898192329367")
+APP_SECRET = os.getenv("APP_SECRET")
+META_USER_TOKEN = os.getenv("META_USER_TOKEN")
+
+_cached_page_token = None
+
+
+def _exchange_for_long_lived(short_token):
+    """Exchange a short-lived user token for a long-lived one (60 days)."""
+    r = requests.get(f"{GRAPH}/oauth/access_token", params={
+        "grant_type": "fb_exchange_token",
+        "client_id": APP_ID,
+        "client_secret": APP_SECRET,
+        "fb_exchange_token": short_token,
+    }, timeout=20).json()
+    return r.get("access_token")
+
+
+def _page_token_from_user(user_token):
+    """Get the Page access token for META_PAGE_ID. Derived from a long-lived
+    user token, this page token does NOT expire."""
+    r = requests.get(f"{GRAPH}/me/accounts",
+                     params={"access_token": user_token, "fields": "id,access_token"},
+                     timeout=20).json()
+    for page in r.get("data", []):
+        if page.get("id") == META_PAGE_ID:
+            return page.get("access_token")
+    return None
+
+
+def get_page_token():
+    """
+    Resolve the effective Facebook Page token:
+      1) If META_ACCESS_TOKEN is set directly (system-user/page token), use it.
+      2) Else derive a permanent page token from META_USER_TOKEN + APP_SECRET.
+    Cached after first successful resolution.
+    """
+    global _cached_page_token
+    if META_ACCESS_TOKEN:
+        return META_ACCESS_TOKEN
+    if _cached_page_token:
+        return _cached_page_token
+    if META_USER_TOKEN and APP_SECRET and META_PAGE_ID:
+        try:
+            long_token = _exchange_for_long_lived(META_USER_TOKEN) or META_USER_TOKEN
+            page_token = _page_token_from_user(long_token)
+            if page_token:
+                _cached_page_token = page_token
+                return page_token
+        except Exception as e:
+            print(f"Token resolution failed: {e}")
+    return None
+
 
 def is_configured():
-    """True only if all Meta credentials are present."""
-    return bool(META_ACCESS_TOKEN and META_PAGE_ID)
+    """True if we can resolve a Facebook posting token."""
+    return bool(get_page_token() and META_PAGE_ID)
 
 
 def post_to_facebook(message, link=None):
@@ -31,10 +85,11 @@ def post_to_facebook(message, link=None):
     Post a text update (optionally with a link) to the Facebook Page.
     Returns {"ok": bool, "id"/"error": ...}.
     """
-    if not (META_ACCESS_TOKEN and META_PAGE_ID):
+    token = get_page_token()
+    if not (token and META_PAGE_ID):
         return {"ok": False, "error": "Facebook not configured (missing token/page id)"}
 
-    payload = {"message": message, "access_token": META_ACCESS_TOKEN}
+    payload = {"message": message, "access_token": token}
     if link:
         payload["link"] = link
 
@@ -54,14 +109,15 @@ def post_to_instagram(image_url, caption):
     image_url must be a PUBLIC url that Meta can fetch (e.g. Railway static URL).
     Returns {"ok": bool, "id"/"error": ...}.
     """
-    if not (META_ACCESS_TOKEN and META_IG_USER_ID):
+    token = get_page_token()
+    if not (token and META_IG_USER_ID):
         return {"ok": False, "error": "Instagram not configured (missing token/ig user id)"}
 
     try:
         # Step 1: create media container
         create = requests.post(
             f"{GRAPH}/{META_IG_USER_ID}/media",
-            data={"image_url": image_url, "caption": caption, "access_token": META_ACCESS_TOKEN},
+            data={"image_url": image_url, "caption": caption, "access_token": token},
             timeout=30,
         ).json()
 
@@ -75,7 +131,7 @@ def post_to_instagram(image_url, caption):
         # Step 2: publish the container
         publish = requests.post(
             f"{GRAPH}/{META_IG_USER_ID}/media_publish",
-            data={"creation_id": creation_id, "access_token": META_ACCESS_TOKEN},
+            data={"creation_id": creation_id, "access_token": token},
             timeout=30,
         ).json()
 
@@ -91,12 +147,13 @@ def fetch_ig_user_id():
     Helper to fetch the Instagram Business Account ID once a valid token is set.
     Run this after configuring META_ACCESS_TOKEN to get META_IG_USER_ID.
     """
-    if not (META_ACCESS_TOKEN and META_PAGE_ID):
+    token = get_page_token()
+    if not (token and META_PAGE_ID):
         return None
     try:
         resp = requests.get(
             f"{GRAPH}/{META_PAGE_ID}",
-            params={"fields": "instagram_business_account", "access_token": META_ACCESS_TOKEN},
+            params={"fields": "instagram_business_account", "access_token": token},
             timeout=15,
         ).json()
         return resp.get("instagram_business_account", {}).get("id")
