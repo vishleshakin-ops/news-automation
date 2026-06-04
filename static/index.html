@@ -3,629 +3,560 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vishleshak Daily Markets - AI Market News</title>
+    <title>Vishleshak Market Brief — Daily AI Market Intelligence</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
             --primary: #7c3aed;
-            --primary-dark: #6d28d9;
+            --primary-dark: #4c1d95;
             --secondary: #3b82f6;
-            --accent: #1e40af;
-            --bg-dark: #0f172a;
-            --bg-card: #1e293b;
-            --bg-hover: #334155;
-            --text-primary: #f1f5f9;
-            --text-secondary: #cbd5e1;
-            --border: #334155;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --error: #ef4444;
+            --bg: #0b0b14;
+            --bg-card: #13131f;
+            --bg-card2: #1a1a2e;
+            --border: #2a2a3d;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --green: #10b981;
+            --red: #ef4444;
+            --gold: #f59e0b;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, var(--bg-dark) 0%, #1a1f35 100%);
-            color: var(--text-primary);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
-            overflow-x: hidden;
         }
 
-        /* Header */
+        /* ── HEADER ── */
         header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            padding: 2rem 0;
-            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);
+            background: #0d0d1a;
+            border-bottom: 1px solid var(--border);
+            padding: 0.9rem 2rem;
             position: sticky;
             top: 0;
             z-index: 100;
         }
-
-        .header-container {
-            max-width: 1200px;
+        .header-inner {
+            max-width: 1100px;
             margin: 0 auto;
-            padding: 0 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-
         .logo {
-            font-size: 1.8rem;
-            font-weight: 800;
-            letter-spacing: -1px;
             display: flex;
             align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+        }
+        .logo-box {
+            width: 36px; height: 36px;
+            background: var(--primary);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 900; font-size: 1.1rem; color: white;
+        }
+        .logo-text { color: var(--text); }
+        .logo-name { font-size: 1rem; font-weight: 700; line-height: 1.1; }
+        .logo-sub { font-size: 0.68rem; color: #a78bfa; letter-spacing: 0.5px; }
+
+        .header-right { display: flex; align-items: center; gap: 0.8rem; }
+        .social-btn {
+            display: flex; align-items: center; gap: 0.4rem;
+            padding: 0.4rem 0.9rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.78rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .social-btn:hover { border-color: var(--primary); color: #a78bfa; }
+        .live-pill {
+            display: flex; align-items: center; gap: 0.4rem;
+            background: rgba(16,185,129,0.1);
+            border: 1px solid var(--green);
+            border-radius: 20px;
+            padding: 0.3rem 0.8rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--green);
+        }
+        .dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+        /* ── DATE BAR ── */
+        .date-bar {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 0.6rem 2rem;
+        }
+        .date-bar-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
             gap: 0.5rem;
         }
-
-        .logo-icon {
-            width: 40px;
-            height: 40px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
+        .date-info { font-size: 0.82rem; color: var(--text-muted); }
+        .date-info strong { color: var(--text); }
+        .date-picker {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.3rem 0.7rem;
+            color: var(--text);
+            font-size: 0.8rem;
+            cursor: pointer;
         }
+        .date-picker:focus { outline: none; border-color: var(--primary); }
 
-        nav {
-            display: flex;
-            gap: 2rem;
-        }
+        /* ── MAIN ── */
+        .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
 
-        nav a {
-            color: rgba(255,255,255,0.9);
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s ease;
+        /* ── FEATURE CARD ── */
+        .feature-card {
+            background: linear-gradient(135deg, #2d0a6e 0%, #1a3a7a 100%);
+            border: 1px solid rgba(124,58,237,0.4);
+            border-radius: 16px;
+            padding: 2.2rem 2.5rem;
+            margin-bottom: 1.5rem;
             position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s;
         }
-
-        nav a::after {
-            content: '';
+        .feature-card:hover { transform: translateY(-2px); border-color: var(--primary); box-shadow: 0 20px 60px rgba(124,58,237,0.2); }
+        .feature-card::after {
+            content: '🌄';
             position: absolute;
-            bottom: -5px;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: rgba(255,255,255,0.8);
-            transition: width 0.3s ease;
+            right: 2.5rem; top: 50%;
+            transform: translateY(-50%);
+            font-size: 5rem;
+            opacity: 0.12;
+            pointer-events: none;
         }
-
-        nav a:hover::after {
-            width: 100%;
+        .feature-badge {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 0.3rem 0.9rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.9rem;
+            color: rgba(255,255,255,0.9);
         }
-
-        /* Main Container */
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 3rem 2rem;
+        .feature-time {
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.6);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
         }
+        .feature-title {
+            font-size: 1.9rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 0.9rem;
+            max-width: 600px;
+        }
+        .feature-tags { display: flex; gap: 0.7rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+        .feature-tag {
+            background: rgba(255,255,255,0.12);
+            border-radius: 6px;
+            padding: 0.3rem 0.8rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+        .feature-excerpt {
+            font-size: 0.95rem;
+            color: rgba(255,255,255,0.75);
+            line-height: 1.6;
+            max-width: 580px;
+            margin-bottom: 1.5rem;
+        }
+        .feature-btn {
+            background: white;
+            color: #4c1d95;
+            border: none;
+            padding: 0.7rem 1.8rem;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex; align-items: center; gap: 0.5rem;
+        }
+        .feature-btn:hover { background: #e9d5ff; transform: translateX(2px); }
 
-        /* Date Selector */
-        .date-selector {
+        /* ── 3 SMALL CARDS ── */
+        .small-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .small-card {
+            background: var(--bg-card2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.4rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+        }
+        .small-card:hover { border-color: var(--primary); transform: translateY(-3px); box-shadow: 0 10px 30px rgba(124,58,237,0.12); }
+        .small-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem; }
+        .small-icon { font-size: 1.8rem; }
+        .small-time {
+            font-size: 0.7rem;
+            color: var(--primary);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: rgba(124,58,237,0.1);
+            border: 1px solid rgba(124,58,237,0.2);
+            border-radius: 4px;
+            padding: 0.2rem 0.5rem;
+        }
+        .small-title { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; line-height: 1.3; }
+        .small-desc { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; flex: 1; margin-bottom: 1rem; }
+        .small-footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
+        .small-btn {
+            background: transparent;
+            border: 1px solid var(--primary);
+            color: #a78bfa;
+            padding: 0.35rem 0.9rem;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .small-btn:hover { background: var(--primary); color: white; }
+        .small-read { font-size: 0.72rem; color: var(--text-muted); }
+
+        /* ── BRIEF CONTENT PANEL ── */
+        .brief-panel {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 15px;
+            border-radius: 14px;
             padding: 2rem;
-            margin-bottom: 3rem;
+            margin-top: 2rem;
+            display: none;
+        }
+        .brief-panel.active { display: block; }
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .panel-title { font-size: 1.2rem; font-weight: 700; }
+        .panel-close {
+            background: var(--border);
+            border: none;
+            color: var(--text-muted);
+            width: 30px; height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .panel-content { font-size: 0.95rem; line-height: 1.8; color: var(--text-muted); white-space: pre-wrap; }
+        .panel-loading { text-align: center; padding: 2rem; color: var(--text-muted); }
+        .spinner {
+            width: 36px; height: 36px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── FOOTER ── */
+        footer {
+            background: var(--bg-card);
+            border-top: 1px solid var(--border);
+            padding: 2rem;
+            margin-top: 4rem;
+        }
+        .footer-inner {
+            max-width: 1100px;
+            margin: 0 auto;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 1rem;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
-
-        .date-info {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .date-label {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 600;
-        }
-
-        .date-picker {
-            background: var(--bg-dark);
-            border: 2px solid var(--primary);
-            border-radius: 10px;
-            padding: 0.8rem 1.2rem;
-            color: var(--text-primary);
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .date-picker:hover {
-            background: var(--primary);
-            border-color: var(--primary);
-        }
-
-        .status {
-            padding: 0.6rem 1.5rem;
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid var(--success);
-            border-radius: 20px;
-            font-size: 0.85rem;
-            color: var(--success);
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .status::before {
-            content: '●';
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        /* Grid Layout */
-        .brief-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        /* Cards */
-        .brief-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 15px;
-            padding: 2rem;
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            cursor: pointer;
-        }
-
-        .brief-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            transform: scaleX(0);
-            transform-origin: left;
-            transition: transform 0.3s ease;
-        }
-
-        .brief-card:hover {
-            border-color: var(--primary);
-            box-shadow: 0 12px 48px rgba(99, 102, 241, 0.15);
-            transform: translateY(-5px);
-        }
-
-        .brief-card:hover::before {
-            transform: scaleX(1);
-        }
-
-        .card-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-            display: inline-block;
-        }
-
-        .card-time {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-        }
-
-        .card-title {
-            font-size: 1.3rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-            line-height: 1.3;
-        }
-
-        .card-description {
-            font-size: 0.95rem;
-            color: var(--text-secondary);
-            line-height: 1.6;
-            margin-bottom: 1.5rem;
-        }
-
-        .card-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .footer-left { font-size: 0.82rem; color: var(--text-muted); }
+        .footer-left strong { color: var(--text); }
+        .footer-links { display: flex; gap: 1.5rem; }
+        .footer-links a { font-size: 0.78rem; color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
+        .footer-links a:hover { color: #a78bfa; }
+        .disclaimer {
+            max-width: 1100px;
+            margin: 1rem auto 0;
+            font-size: 0.72rem;
+            color: #475569;
+            text-align: center;
             padding-top: 1rem;
             border-top: 1px solid var(--border);
         }
 
-        .read-more {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            border: none;
-            padding: 0.6rem 1.2rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .read-more:hover {
-            transform: translateX(2px);
-            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
-        }
-
-        .card-stats {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-        }
-
-        /* Featured Section */
-        .featured {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            border-radius: 15px;
-            padding: 3rem;
-            margin-bottom: 3rem;
-            color: white;
-            box-shadow: 0 15px 50px rgba(99, 102, 241, 0.3);
-        }
-
-        .featured-label {
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            opacity: 0.9;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-        }
-
-        .featured-title {
-            font-size: 2.2rem;
-            font-weight: 800;
-            margin-bottom: 1rem;
-            line-height: 1.2;
-        }
-
-        .featured-text {
-            font-size: 1.1rem;
-            opacity: 0.95;
-            line-height: 1.6;
-            margin-bottom: 2rem;
-            max-width: 600px;
-        }
-
-        .featured-button {
-            background: rgba(255,255,255,0.2);
-            border: 2px solid rgba(255,255,255,0.8);
-            color: white;
-            padding: 0.8rem 2rem;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-        }
-
-        .featured-button:hover {
-            background: rgba(255,255,255,0.3);
-            transform: translateY(-2px);
-        }
-
-        /* Footer */
-        footer {
-            background: var(--bg-card);
-            border-top: 1px solid var(--border);
-            padding: 3rem 2rem;
-            margin-top: 5rem;
-            text-align: center;
-        }
-
-        .footer-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 2rem;
-            margin-bottom: 2rem;
-            text-align: left;
-        }
-
-        .footer-section h3 {
-            margin-bottom: 1rem;
-            color: var(--primary);
-        }
-
-        .footer-section a {
-            display: block;
-            color: var(--text-secondary);
-            text-decoration: none;
-            margin-bottom: 0.5rem;
-            transition: color 0.3s ease;
-        }
-
-        .footer-section a:hover {
-            color: var(--primary);
-        }
-
-        .footer-bottom {
-            border-top: 1px solid var(--border);
-            padding-top: 2rem;
-            color: var(--text-secondary);
-        }
-
-        /* Loading Animation */
-        .loading {
-            text-align: center;
-            padding: 3rem;
-        }
-
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid var(--border);
-            border-top: 4px solid var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Responsive */
+        /* ── RESPONSIVE ── */
         @media (max-width: 768px) {
-            .header-container {
-                flex-direction: column;
-                gap: 1rem;
-                text-align: center;
-            }
-
-            nav {
-                gap: 1rem;
-                font-size: 0.9rem;
-            }
-
-            .brief-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .date-selector {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .featured-title {
-                font-size: 1.6rem;
-            }
-
-            .featured-text {
-                font-size: 1rem;
-            }
-        }
-
-        /* Utility Classes */
-        .text-center {
-            text-align: center;
-        }
-
-        .mt-5 {
-            margin-top: 3rem;
-        }
-
-        .gradient-text {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            .container { padding: 1rem; }
+            .feature-card { padding: 1.5rem; }
+            .feature-title { font-size: 1.3rem; }
+            .feature-card::after { display: none; }
+            .small-grid { grid-template-columns: 1fr; }
+            .header-inner { gap: 0.5rem; }
+            .social-btn span { display: none; }
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <header>
-        <div class="header-container">
-            <div class="logo">
-                <div class="logo-icon">V</div>
-                <div style="display: flex; flex-direction: column; gap: 0; line-height: 1;">
-                    <span style="font-size: 1.2rem;">Vishleshak</span>
-                    <span style="font-size: 0.7rem; opacity: 0.8; font-weight: 500;">Daily Markets</span>
-                </div>
-            </div>
-            <nav>
-                <a href="https://vishleshak.in">Home</a>
-                <a href="https://vishleshak.in/#services">Services</a>
-                <a href="https://vishleshak.in/news">News</a>
-                <a href="https://vishleshak.in/#contact">Contact</a>
-            </nav>
-        </div>
-    </header>
 
-    <!-- Main Content -->
-    <div class="container">
-        <!-- Featured Section -->
-        <div class="featured">
-            <div class="featured-label">📊 Daily Market Intelligence</div>
-            <h1 class="featured-title">AI Market Briefs for Smart Investors</h1>
-            <p class="featured-text">Get comprehensive AI-analyzed market intelligence delivered three times daily. Pre-market watchlist, breaking headlines, closing summary, and expert takeaways — all powered by Vishleshak AI.</p>
-            <button class="featured-button">Start Reading →</button>
-        </div>
-
-        <!-- Date Selector -->
-        <div class="date-selector">
-            <div class="date-info">
-                <span class="date-label">📅 Select Date:</span>
-                <input type="date" class="date-picker" id="dateInput" value="2026-06-04">
+<!-- HEADER -->
+<header>
+    <div class="header-inner">
+        <a href="https://vishleshak.in" class="logo">
+            <div class="logo-box">V</div>
+            <div class="logo-text">
+                <div class="logo-name">Vishleshak Market Brief</div>
+                <div class="logo-sub">AI-powered daily market intelligence</div>
             </div>
-            <div class="status">
-                <span>Live & Updated</span>
+        </a>
+        <div class="header-right">
+            <a href="https://instagram.com/vishleshak.market.brief" target="_blank" class="social-btn">
+                📸 <span>Instagram</span>
+            </a>
+            <a href="https://www.facebook.com/profile.php?id=61590366341243" target="_blank" class="social-btn">
+                👍 <span>Facebook</span>
+            </a>
+            <div class="live-pill">
+                <div class="dot"></div> Live
             </div>
         </div>
+    </div>
+</header>
 
-        <!-- Brief Grid -->
-        <div class="brief-grid">
-            <!-- Pre-Market Card -->
-            <div class="brief-card">
-                <div class="card-time">09:00 AM</div>
-                <div class="card-icon">🌅</div>
-                <h2 class="card-title">Pre-Market Watchlist</h2>
-                <p class="card-description">Early trading outlook and key movers to watch before market opens. Technical analysis and overnight developments.</p>
-                <div class="card-footer">
-                    <a href="#" class="read-more">View</a>
-                    <span class="card-stats">5-10 min read</span>
-                </div>
+<!-- DATE BAR -->
+<div class="date-bar">
+    <div class="date-bar-inner">
+        <div class="date-info">
+            <strong id="todayDisplay">Today</strong> — Briefs updated at 9 AM, 4 PM & 6 PM IST
+        </div>
+        <input type="date" class="date-picker" id="dateInput">
+    </div>
+</div>
+
+<!-- MAIN -->
+<div class="container">
+
+    <!-- FEATURE CARD — Closing Summary -->
+    <div class="feature-card" onclick="loadBrief('closing', 'Closing Market Summary', this)">
+        <div class="feature-badge">⭐ Today's Highlight</div>
+        <div class="feature-time">🌄 04:00 PM — Closing Market Summary</div>
+        <div class="feature-title" id="featureTitle">Today's Market Close</div>
+        <div class="feature-tags">
+            <span class="feature-tag" id="niftyTag">Nifty: Loading...</span>
+            <span class="feature-tag" id="sensexTag">Sensex: Loading...</span>
+            <span class="feature-tag" id="fiiTag">FII: Loading...</span>
+        </div>
+        <div class="feature-excerpt" id="featureExcerpt">
+            Loading today's closing market summary...
+        </div>
+        <button class="feature-btn">Read Full Brief →</button>
+    </div>
+
+    <!-- 3 SMALL CARDS -->
+    <div class="small-grid">
+        <!-- Pre-Market -->
+        <div class="small-card" onclick="loadBrief('morning', 'Pre-Market Watchlist', this)">
+            <div class="small-card-top">
+                <div class="small-icon">🌅</div>
+                <div class="small-time">09:00 AM</div>
             </div>
-
-            <!-- Headlines Card -->
-            <div class="brief-card">
-                <div class="card-time">Throughout Day</div>
-                <div class="card-icon">📰</div>
-                <h2 class="card-title">Top 10 Headlines</h2>
-                <p class="card-description">Breaking business news and market-moving stories. Curated selection of the most impactful developments.</p>
-                <div class="card-footer">
-                    <a href="#" class="read-more">View</a>
-                    <span class="card-stats">8-12 min read</span>
-                </div>
-            </div>
-
-            <!-- Closing Summary Card -->
-            <div class="brief-card">
-                <div class="card-time">04:00 PM</div>
-                <div class="card-icon">🌄</div>
-                <h2 class="card-title">Closing Market Summary</h2>
-                <p class="card-description">End-of-day market recap with index performance, sector analysis, and trading volume insights.</p>
-                <div class="card-footer">
-                    <a href="#" class="read-more">View</a>
-                    <span class="card-stats">6-10 min read</span>
-                </div>
-            </div>
-
-            <!-- Takeaway Card -->
-            <div class="brief-card">
-                <div class="card-time">After Market Close</div>
-                <div class="card-icon">💡</div>
-                <h2 class="card-title">Key Takeaway</h2>
-                <p class="card-description">Strategic interpretation of market activity and what it means for your portfolio. Expert analysis and outlook.</p>
-                <div class="card-footer">
-                    <a href="#" class="read-more">View</a>
-                    <span class="card-stats">4-6 min read</span>
-                </div>
+            <div class="small-title">Pre-Market Watchlist</div>
+            <div class="small-desc">Key movers, overnight cues, and levels to watch before the market opens.</div>
+            <div class="small-footer">
+                <button class="small-btn">Read Brief →</button>
+                <span class="small-read">5-10 min</span>
             </div>
         </div>
 
-        <!-- Info Section -->
-        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 15px; padding: 3rem; text-align: center; margin: 3rem 0;">
-            <p class="gradient-text" style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem;">Powered by Vishleshak AI</p>
-            <p style="color: var(--text-secondary); font-size: 1.1rem; line-height: 1.6;">
-                Our advanced AI engine analyzes thousands of market data points daily to deliver comprehensive, actionable intelligence.
-                <br><strong>3 updates daily</strong> • <strong>Real-time analysis</strong> • <strong>Professional insights</strong>
-            </p>
+        <!-- Top 10 Headlines -->
+        <div class="small-card" onclick="loadBrief('headlines', 'Top 10 Headlines', this)">
+            <div class="small-card-top">
+                <div class="small-icon">📰</div>
+                <div class="small-time">Throughout Day</div>
+            </div>
+            <div class="small-title">Top 10 Headlines</div>
+            <div class="small-desc">Today's most important business and market-moving stories, curated by AI.</div>
+            <div class="small-footer">
+                <button class="small-btn">Read Brief →</button>
+                <span class="small-read">8-12 min</span>
+            </div>
+        </div>
+
+        <!-- Key Takeaway -->
+        <div class="small-card" onclick="loadBrief('evening', 'Key Takeaway', this)">
+            <div class="small-card-top">
+                <div class="small-icon">💡</div>
+                <div class="small-time">After Market Close</div>
+            </div>
+            <div class="small-title">Key Takeaway</div>
+            <div class="small-desc">Strategic interpretation — what today's market means for your portfolio.</div>
+            <div class="small-footer">
+                <button class="small-btn">Read Brief →</button>
+                <span class="small-read">4-6 min</span>
+            </div>
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer>
-        <div class="footer-content">
-            <div class="footer-section">
-                <h3>Product</h3>
-                <a href="#">Daily Brief</a>
-                <a href="#">Market Data</a>
-                <a href="#">Analysis</a>
-            </div>
-            <div class="footer-section">
-                <h3>Company</h3>
-                <a href="#">About Us</a>
-                <a href="#">Blog</a>
-                <a href="#">Careers</a>
-            </div>
-            <div class="footer-section">
-                <h3>Legal</h3>
-                <a href="#">Privacy</a>
-                <a href="#">Terms</a>
-                <a href="#">Disclaimer</a>
-            </div>
+    <!-- BRIEF CONTENT PANEL -->
+    <div class="brief-panel" id="briefPanel">
+        <div class="panel-header">
+            <div class="panel-title" id="panelTitle">Brief</div>
+            <button class="panel-close" onclick="closePanel()">✕</button>
         </div>
-        <div class="footer-bottom">
-            <p>&copy; 2026 Vishleshak. Analyze. Create. Automate.</p>
-            <p style="margin-top: 0.5rem; font-size: 0.9rem;">AI-powered market intelligence • Updated 3x daily • Always accurate</p>
+        <div id="panelContent"></div>
+    </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer>
+    <div class="footer-inner">
+        <div class="footer-left">
+            <strong>Vishleshak Market Brief</strong> — Powered by Vishleshak AI<br>
+            Updated 3× daily • 9 AM, 4 PM & 6 PM IST
         </div>
-    </footer>
+        <div class="footer-links">
+            <a href="https://vishleshak.in">Main Website</a>
+            <a href="https://instagram.com/vishleshak.market.brief" target="_blank">Instagram</a>
+            <a href="https://www.facebook.com/profile.php?id=61590366341243" target="_blank">Facebook</a>
+        </div>
+    </div>
+    <div class="disclaimer">
+        ⚠️ Educational purposes only. Not investment advice. Always consult a SEBI-registered advisor before investing.
+    </div>
+</footer>
 
-    <script>
-        // Date picker functionality
-        const dateInput = document.getElementById('dateInput');
-        dateInput.addEventListener('change', function() {
-            console.log('Date selected:', this.value);
-            // Add API call here to fetch data for selected date
-        });
+<script>
+    const API_BASE = 'https://news-automation-production-df05.up.railway.app';
 
-        // Smooth scroll for navigation
-        document.querySelectorAll('nav a').forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                const target = this.getAttribute('href');
-                if (target !== '#') {
-                    const element = document.querySelector(target);
-                    element?.scrollIntoView({ behavior: 'smooth' });
-                }
-            });
-        });
+    // Set today's date
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0];
+    const display = today.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    document.getElementById('todayDisplay').textContent = display;
+    document.getElementById('dateInput').value = dateStr;
 
-        // Animate cards on scroll
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
-
-        const observer = new IntersectionObserver(function(entries) {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.animation = 'fadeInUp 0.6s ease forwards';
-                }
-            });
-        }, observerOptions);
-
-        document.querySelectorAll('.brief-card').forEach(card => {
-            observer.observe(card);
-        });
-    </script>
-
-    <style>
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
+    // Load brief data on page load
+    async function loadPageData() {
+        try {
+            const res = await fetch(`${API_BASE}/brief/${dateStr}`);
+            if (!res.ok) {
+                setFeaturePlaceholder();
+                return;
             }
-            to {
-                opacity: 1;
-                transform: translateY(0);
+            const data = await res.json();
+            if (data.briefs && data.briefs.length > 0) {
+                const brief = data.briefs[0];
+                updateFeatureCard(brief);
+            } else {
+                setFeaturePlaceholder();
             }
+        } catch(e) {
+            setFeaturePlaceholder();
         }
-    </style>
+    }
+
+    function updateFeatureCard(brief) {
+        const content = brief.content || '';
+        const lines = content.split('\n').filter(l => l.trim());
+        const excerpt = lines.slice(0, 3).join(' ').substring(0, 200) + '...';
+        document.getElementById('featureTitle').textContent = brief.title || "Today's Market Close";
+        document.getElementById('featureExcerpt').textContent = excerpt || 'Click to read today\'s closing market summary.';
+
+        // Update tags from indices data
+        if (brief.indices && brief.indices.nifty) {
+            const n = brief.indices.nifty;
+            document.getElementById('niftyTag').textContent = `Nifty: ${parseFloat(n.price || 0).toLocaleString('en-IN')}`;
+        }
+        if (brief.indices && brief.indices.sensex) {
+            const s = brief.indices.sensex;
+            document.getElementById('sensexTag').textContent = `Sensex: ${parseFloat(s.price || 0).toLocaleString('en-IN')}`;
+        }
+        document.getElementById('fiiTag').textContent = 'View Full Analysis';
+    }
+
+    function setFeaturePlaceholder() {
+        document.getElementById('featureTitle').textContent = "Today's Market Brief";
+        document.getElementById('featureExcerpt').textContent = "Today's closing summary will be available at 4 PM IST. Check back then for full market analysis.";
+        document.getElementById('niftyTag').textContent = 'Nifty 50';
+        document.getElementById('sensexTag').textContent = 'Sensex';
+        document.getElementById('fiiTag').textContent = '4 PM Update';
+    }
+
+    // Load & show brief in panel
+    async function loadBrief(slot, title, el) {
+        const panel = document.getElementById('briefPanel');
+        const panelTitle = document.getElementById('panelTitle');
+        const panelContent = document.getElementById('panelContent');
+
+        panelTitle.textContent = title;
+        panelContent.innerHTML = '<div class="panel-loading"><div class="spinner"></div>Loading brief...</div>';
+        panel.classList.add('active');
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        try {
+            const selectedDate = document.getElementById('dateInput').value;
+            const res = await fetch(`${API_BASE}/brief/${selectedDate}`);
+            if (!res.ok) {
+                panelContent.innerHTML = '<div class="panel-loading">No brief available for this date yet. Briefs are generated at 9 AM, 4 PM & 6 PM IST.</div>';
+                return;
+            }
+            const data = await res.json();
+            if (data.briefs && data.briefs.length > 0) {
+                const brief = data.briefs[0];
+                panelContent.innerHTML = `<div class="panel-content">${brief.content}</div>`;
+            } else {
+                panelContent.innerHTML = '<div class="panel-loading">Brief not yet generated. Check back at the scheduled time.</div>';
+            }
+        } catch(e) {
+            panelContent.innerHTML = '<div class="panel-loading">Could not load brief. Please try again.</div>';
+        }
+    }
+
+    function closePanel() {
+        document.getElementById('briefPanel').classList.remove('active');
+    }
+
+    // Date picker change
+    document.getElementById('dateInput').addEventListener('change', function() {
+        loadPageData();
+        closePanel();
+    });
+
+    // Init
+    loadPageData();
+</script>
 </body>
 </html>
