@@ -64,9 +64,21 @@ MACRO = {"Nifty": "^NSEI", "Sensex": "^BSESN", "Gold": "GC=F", "Silver": "SI=F",
 # ----------------------------------------------------------------------------
 # DATA HELPERS (Yahoo Finance — unlimited)
 # ----------------------------------------------------------------------------
+# In-memory cache: dedups fetches within a run + reuses last-good data if a later fetch fails.
+_PCT_CACHE = {}   # key -> (timestamp, result)
+_FRESH_TTL = 120  # seconds — within a post run, reuse the same fetch
+
+
 def _pct_change(symbols, retries=3):
     """Return {symbol: {'price':float,'pct':float}} from last 2 daily closes.
-    Retries with a browser-impersonation session (Yahoo blocks plain cloud IPs)."""
+    Browser-impersonation session + retries (Yahoo blocks plain cloud IPs).
+    Caches last-good result and reuses it on failure (self-healing)."""
+    key = tuple(sorted(symbols))
+    now = time.time()
+    cached = _PCT_CACHE.get(key)
+    if cached and now - cached[0] < _FRESH_TTL:
+        return cached[1]  # fresh enough — reuse (dedups movers+sector etc.)
+
     for attempt in range(retries):
         try:
             data = yf.download(" ".join(symbols), period="5d", interval="1d",
@@ -81,11 +93,17 @@ def _pct_change(symbols, retries=3):
                 except Exception:
                     continue
             if out:
+                _PCT_CACHE[key] = (now, out)
                 return out
-            print(f"_pct_change attempt {attempt+1}: empty result, retrying...")
+            print(f"_pct_change attempt {attempt+1}: empty, retrying...")
         except Exception as e:
             print(f"_pct_change attempt {attempt+1} error: {e}")
         time.sleep(2)
+
+    # All attempts failed — reuse last-good cache (any age) rather than return empty
+    if cached:
+        print("_pct_change: live fetch failed, using last-good cache")
+        return cached[1]
     return {}
 
 
