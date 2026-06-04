@@ -2,5 +2,13 @@
 static/posts/test_*.png
 
 _*.txt
+_*.py
 _t.py
 static/posts/
+
+# Secrets — never commit
+.env
+.env.*
+# Python cache
+__pycache__/
+*.pyc
