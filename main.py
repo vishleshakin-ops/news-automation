@@ -424,6 +424,32 @@ async def trigger_social(slot: str):
     return run_social_post(slot)
 
 
+@app.get("/social/token-scopes")
+async def token_scopes():
+    """Show which permissions the configured token actually has (via debug_token)."""
+    import requests as _rq
+    app_id = social.APP_ID
+    secret = social.APP_SECRET
+    user_token = social.META_USER_TOKEN
+    if not (app_id and secret and user_token):
+        return {"error": "Need META_APP_ID + APP_SECRET + META_USER_TOKEN set"}
+    try:
+        app_token = f"{app_id}|{secret}"
+        r = _rq.get("https://graph.facebook.com/v21.0/debug_token",
+                    params={"input_token": user_token, "access_token": app_token},
+                    timeout=20).json()
+        scopes = r.get("data", {}).get("scopes", [])
+        needed = ["pages_manage_posts", "pages_read_engagement", "pages_show_list",
+                  "instagram_basic", "instagram_content_publish"]
+        return {
+            "granted_scopes": scopes,
+            "missing": [s for s in needed if s not in scopes],
+            "has_all_required": all(s in scopes for s in needed),
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @app.get("/social/diagnose")
 async def diagnose_social():
     """Diagnose Meta token setup. Shows whether a page token resolves + the IG account id."""
