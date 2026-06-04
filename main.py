@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import requests
+import yfinance as yf
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 import pytz
@@ -105,25 +106,43 @@ def get_nifty_data():
     return None
 
 def get_top_movers():
-    """Get top gainers and losers (using simple API or cached data)."""
-    # Note: Alpha Vantage doesn't have built-in top movers endpoint
-    # For now, return placeholder. In production, use a dedicated endpoint or cache
-    return {
-        "top_gainers": [
-            {"symbol": "RELIANCE", "change_percent": "+2.5%"},
-            {"symbol": "TCS", "change_percent": "+1.8%"},
-            {"symbol": "INFY", "change_percent": "+1.2%"},
-            {"symbol": "HDFC", "change_percent": "+0.9%"},
-            {"symbol": "ICICIBANK", "change_percent": "+0.7%"}
-        ],
-        "top_losers": [
-            {"symbol": "MARUTI", "change_percent": "-1.5%"},
-            {"symbol": "BAJAJFINSV", "change_percent": "-1.2%"},
-            {"symbol": "AXISBANK", "change_percent": "-0.8%"},
-            {"symbol": "KOTAKBANK", "change_percent": "-0.6%"},
-            {"symbol": "LT", "change_percent": "-0.5%"}
-        ]
-    }
+    """Get real NSE top gainers and losers via Yahoo Finance."""
+    NIFTY_50 = [
+        "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS",
+        "HINDUNILVR.NS", "BAJFINANCE.NS", "SBIN.NS", "BHARTIARTL.NS", "KOTAKBANK.NS",
+        "LT.NS", "AXISBANK.NS", "WIPRO.NS", "MARUTI.NS", "ULTRACEMCO.NS",
+        "TITAN.NS", "SUNPHARMA.NS", "POWERGRID.NS", "NTPC.NS", "ASIANPAINT.NS",
+        "TECHM.NS", "HCLTECH.NS", "BAJAJFINSV.NS", "TATASTEEL.NS", "ONGC.NS",
+        "COALINDIA.NS", "INDUSINDBK.NS", "ADANIENT.NS", "JSWSTEEL.NS", "NESTLEIND.NS"
+    ]
+    try:
+        tickers = " ".join(NIFTY_50)
+        data = yf.download(tickers, period="2d", interval="1d", group_by="ticker", progress=False)
+        results = []
+        for ticker in NIFTY_50:
+            try:
+                closes = data[ticker]["Close"].dropna()
+                if len(closes) >= 2:
+                    prev = float(closes.iloc[-2])
+                    curr = float(closes.iloc[-1])
+                    change = ((curr - prev) / prev) * 100
+                    symbol = ticker.replace(".NS", "")
+                    results.append({
+                        "symbol": symbol,
+                        "price": f"₹{curr:,.2f}",
+                        "change_percent": f"{change:+.2f}%"
+                    })
+            except:
+                continue
+
+        results.sort(key=lambda x: float(x["change_percent"].replace("%", "")), reverse=True)
+        return {
+            "top_gainers": results[:5],
+            "top_losers": list(reversed(results[-5:]))
+        }
+    except Exception as e:
+        print(f"Error fetching top movers: {e}")
+        return {"top_gainers": [], "top_losers": []}
 
 # ============================================================================
 # BRIEF GENERATION
