@@ -122,6 +122,9 @@ def generate_post_image(title, time_label, body_lines, filename):
     draw.text((60, H - 48), "@vishleshak.market.brief  •  Educational only, not investment advice",
               font=_font(20), fill=MUTED)
 
+    # Instagram Graph API requires JPEG (PNG is rejected)
+    if filename.lower().endswith(".png"):
+        filename = filename[:-4] + ".jpg"
     path = os.path.join(POSTS_DIR, filename)
-    img.save(path, "PNG")
+    img.save(path, "JPEG", quality=92)
     return path
