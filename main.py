@@ -4,7 +4,6 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import requests
-from anthropic import Anthropic
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 import pytz
@@ -23,14 +22,26 @@ init_db()
 ALPHA_VANTAGE_KEY = os.getenv("ALPHA_VANTAGE_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 
-# Clients - Initialize lazily to avoid startup issues
-def get_anthropic_client():
-    """Get or create Anthropic client."""
-    try:
-        return Anthropic(api_key=ANTHROPIC_API_KEY)
-    except Exception as e:
-        print(f"Warning: Could not initialize Anthropic client: {e}")
-        return None
+def call_anthropic(prompt: str) -> str:
+    """Call Anthropic API directly via HTTP — no SDK, no proxies issue."""
+    headers = {
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json"
+    }
+    payload = {
+        "model": "claude-opus-4-5",
+        "max_tokens": 1024,
+        "messages": [{"role": "user", "content": prompt}]
+    }
+    response = requests.post(
+        "https://api.anthropic.com/v1/messages",
+        headers=headers,
+        json=payload,
+        timeout=30
+    )
+    response.raise_for_status()
+    return response.json()["content"][0]["text"]
 
 # Timezone
 INDIA_TZ = pytz.timezone("Asia/Kolkata")
@@ -169,23 +180,7 @@ Generate a brief with these 4 sections (each 2-3 sentences):
 Format as plain text, no markdown. Be concise and professional."""
 
     try:
-        client = get_anthropic_client()
-        if not client:
-            return {
-                "status": "error",
-                "message": "Anthropic client not available"
-            }
-
-        message = client.messages.create(
-            model="claude-opus-4-1-20250805",
-            max_tokens=1024,
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
-
-        brief_text = message.content[0].text
-
+        brief_text = call_anthropic(prompt)
         return {
             "status": "success",
             "time_slot": time_slot,
