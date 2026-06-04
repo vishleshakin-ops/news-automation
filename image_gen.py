@@ -81,6 +81,30 @@ def _font(size, bold=False):
     return ImageFont.load_default()
 
 
+def _sanitize_line(line):
+    """
+    Replace emojis (which the image font can't render → □) with clean glyphs,
+    and return (clean_text, color). DejaVu renders ▲ ▼ ● fine.
+    """
+    s = line
+    color = WHITE
+    # Determine direction/color from leading marker
+    if s.startswith(("📈", "🟢", "+")):
+        color = GREEN
+    elif s.startswith(("📉", "🔴", "-")):
+        color = RED
+
+    # Replace meaningful arrows with clean triangles
+    s = s.replace("📈", "▲").replace("📉", "▼")
+    s = s.replace("🟢", "▲").replace("🔴", "▼")
+
+    # Strip decorative emojis that have no text meaning
+    for e in ["📊", "📋", "📌", "🏭", "👀", "🌍", "🌅", "🌄", "💛", "⚪",
+              "📰", "🏆", "⭐", "💡", "🔥", "✅", "❌", "⚠️", "️"]:
+        s = s.replace(e, "")
+    return s.strip(), color
+
+
 def _gradient_bg():
     img = Image.new("RGB", (W, H), BG_TOP)
     draw = ImageDraw.Draw(img)
@@ -132,13 +156,9 @@ def generate_post_image(title, time_label, body_lines, filename):
 
     # Body lines
     body_font = _font(34)
-    for line in body_lines:
-        color = WHITE
-        if line.strip().startswith(("📈", "+")):
-            color = GREEN
-        elif line.strip().startswith(("📉", "-")):
-            color = RED
-        for wrapped in textwrap.wrap(line, width=42) or [""]:
+    for raw in body_lines:
+        clean, color = _sanitize_line(raw)
+        for wrapped in textwrap.wrap(clean, width=42) or [""]:
             draw.text((60, y), wrapped, font=body_font, fill=color)
             y += 46
         y += 8
