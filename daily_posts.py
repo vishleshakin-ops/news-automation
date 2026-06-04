@@ -292,7 +292,10 @@ def run_post(slot, public_base_url=None):
             img_path = image_gen.generate_post_image(
                 post["title"], post["time_label"], post["ig_lines"], fname)
             if img_path:
-                image_url = f"{public_base_url.rstrip('/')}/static/posts/{os.path.basename(img_path)}"
+                # Prefer imgbb (Meta fetches it reliably); fall back to Railway static
+                image_url = image_gen.upload_to_imgbb(img_path)
+                if not image_url:
+                    image_url = f"{public_base_url.rstrip('/')}/static/posts/{os.path.basename(img_path)}"
                 caption = post["fb_text"]
                 result["instagram"] = social.post_to_instagram(image_url, caption)
         except Exception as e:

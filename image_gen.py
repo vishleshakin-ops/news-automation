@@ -6,14 +6,43 @@ Requires Pillow. Fonts: uses DejaVu (installed via Dockerfile apt fonts-dejavu-c
 with graceful fallback to PIL default if unavailable.
 """
 import os
+import base64
 import textwrap
 from datetime import datetime
+
+import requests
 
 try:
     from PIL import Image, ImageDraw, ImageFont
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
+
+IMGBB_API_KEY = os.getenv("IMGBB_API_KEY")
+
+
+def upload_to_imgbb(image_path):
+    """
+    Upload a local image to imgbb and return a public URL that Meta reliably fetches.
+    Returns the URL string, or None on failure / if no key set.
+    """
+    if not IMGBB_API_KEY:
+        return None
+    try:
+        with open(image_path, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode()
+        resp = requests.post(
+            "https://api.imgbb.com/1/upload",
+            data={"key": IMGBB_API_KEY, "image": b64},
+            timeout=30,
+        ).json()
+        if resp.get("success"):
+            return resp["data"]["url"]
+        print(f"imgbb upload failed: {resp}")
+        return None
+    except Exception as e:
+        print(f"imgbb error: {e}")
+        return None
 
 # Theme
 BG_TOP = (45, 10, 110)       # deep purple
