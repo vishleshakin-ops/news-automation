@@ -23,8 +23,14 @@ init_db()
 ALPHA_VANTAGE_KEY = os.getenv("ALPHA_VANTAGE_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 
-# Clients
-anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY)
+# Clients - Initialize lazily to avoid startup issues
+def get_anthropic_client():
+    """Get or create Anthropic client."""
+    try:
+        return Anthropic(api_key=ANTHROPIC_API_KEY)
+    except Exception as e:
+        print(f"Warning: Could not initialize Anthropic client: {e}")
+        return None
 
 # Timezone
 INDIA_TZ = pytz.timezone("Asia/Kolkata")
@@ -163,7 +169,14 @@ Generate a brief with these 4 sections (each 2-3 sentences):
 Format as plain text, no markdown. Be concise and professional."""
 
     try:
-        message = anthropic_client.messages.create(
+        client = get_anthropic_client()
+        if not client:
+            return {
+                "status": "error",
+                "message": "Anthropic client not available"
+            }
+
+        message = client.messages.create(
             model="claude-opus-4-1-20250805",
             max_tokens=1024,
             messages=[
@@ -182,6 +195,8 @@ Format as plain text, no markdown. Be concise and professional."""
 
     except Exception as e:
         print(f"Error generating brief: {e}")
+        import traceback
+        traceback.print_exc()
         return {
             "status": "error",
             "message": str(e)
