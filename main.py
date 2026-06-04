@@ -10,6 +10,11 @@ from datetime import datetime
 import pytz
 import json
 from database import init_db, save_brief, get_brief, get_all_briefs
+import daily_posts
+import social
+
+# Public base URL of this service (for Instagram image hosting). Set in Railway.
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://news-automation-production-df05.up.railway.app")
 
 load_dotenv()
 
@@ -269,8 +274,38 @@ def start_scheduler():
         id='evening_brief'
     )
 
+    # ----- SOCIAL POSTS (Facebook required, Instagram best-effort) -----
+    # 5 daily posts at IST times
+    social_schedule = [
+        ("premarket", 9, 0),    # 9:00 AM  Pre-Market Watchlist
+        ("closing", 16, 0),     # 4:00 PM  Closing Summary
+        ("movers", 16, 15),     # 4:15 PM  Top 5 Gainers & Losers
+        ("summary", 16, 30),    # 4:30 PM  Daily Summary Sheet
+        ("watchlist", 18, 0),   # 6:00 PM  Tomorrow's Watchlist
+    ]
+    for slot, hh, mm in social_schedule:
+        scheduler.add_job(
+            run_social_post, 'cron', hour=hh, minute=mm,
+            args=[slot], id=f"social_{slot}"
+        )
+
     scheduler.start()
-    print("[OK] Scheduler started (9 AM, 4 PM, 6 PM India time)")
+    print("[OK] Scheduler started: 3 briefs + 5 social posts (IST)")
+
+
+def run_social_post(slot):
+    """Generate + publish one social post (called by scheduler)."""
+    try:
+        result = daily_posts.run_post(slot, public_base_url=PUBLIC_BASE_URL)
+        fb = result.get("facebook", {})
+        ig = result.get("instagram", {})
+        print(f"[SOCIAL {slot}] FB ok={fb.get('ok')} {fb.get('id', fb.get('error'))} | "
+              f"IG ok={ig.get('ok')} {ig.get('id', ig.get('error'))}")
+        return result
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"ok": False, "error": str(e)}
 
 # ============================================================================
 # API ENDPOINTS
@@ -361,8 +396,32 @@ async def health_check():
         "status": "healthy",
         "timestamp": datetime.now(INDIA_TZ).isoformat(),
         "alpha_vantage": "configured" if ALPHA_VANTAGE_KEY else "missing",
-        "anthropic": "configured" if ANTHROPIC_API_KEY else "missing"
+        "anthropic": "configured" if ANTHROPIC_API_KEY else "missing",
+        "news_api": "configured" if os.getenv("NEWS_API_KEY") else "missing",
+        "facebook": "configured" if social.is_configured() else "missing",
+        "instagram": "configured" if social.META_IG_USER_ID else "not linked (optional)"
     }
+
+
+@app.get("/social/preview/{slot}")
+async def preview_social(slot: str):
+    """Preview the generated text for a post WITHOUT publishing. slot: premarket|closing|movers|summary|watchlist"""
+    builder = daily_posts.POST_BUILDERS.get(slot)
+    if not builder:
+        raise HTTPException(status_code=404, detail=f"Unknown slot. Use: {list(daily_posts.POST_BUILDERS)}")
+    try:
+        post = builder()
+        return {"slot": slot, "title": post["title"], "facebook_text": post["fb_text"]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/social/post/{slot}")
+async def trigger_social(slot: str):
+    """Manually generate + PUBLISH a post now (Facebook + Instagram if configured)."""
+    if slot not in daily_posts.POST_BUILDERS:
+        raise HTTPException(status_code=404, detail=f"Unknown slot. Use: {list(daily_posts.POST_BUILDERS)}")
+    return run_social_post(slot)
 
 # ============================================================================
 # STATIC FILES
