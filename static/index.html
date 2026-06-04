@@ -429,6 +429,16 @@
         </div>
     </div>
 
+    <!-- ARCHIVE SECTION -->
+    <div style="margin: 2rem 0 0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h2 style="font-size:1rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">📅 Previous Briefs</h2>
+        </div>
+        <div id="archiveGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:0.8rem;">
+            <div style="color:var(--text-muted); font-size:0.85rem; padding:1rem;">Loading archive...</div>
+        </div>
+    </div>
+
     <!-- BRIEF CONTENT PANEL -->
     <div class="brief-panel" id="briefPanel">
         <div class="panel-header">
@@ -555,8 +565,65 @@
         closePanel();
     });
 
+    // Load archive dates
+    async function loadArchive() {
+        try {
+            const res = await fetch(`${API_BASE}/dashboard`);
+            if (!res.ok) return;
+            const data = await res.json();
+            const grid = document.getElementById('archiveGrid');
+
+            if (!data.available_dates || data.available_dates.length === 0) {
+                grid.innerHTML = '<div style="color:var(--text-muted); font-size:0.82rem; padding:0.5rem;">No past briefs yet. Check back tomorrow.</div>';
+                return;
+            }
+
+            // Filter out today
+            const pastDates = data.available_dates.filter(d => d !== dateStr);
+
+            if (pastDates.length === 0) {
+                grid.innerHTML = '<div style="color:var(--text-muted); font-size:0.82rem; padding:0.5rem;">Only today\'s brief available so far. Archive grows daily.</div>';
+                return;
+            }
+
+            grid.innerHTML = pastDates.map(d => {
+                const dateObj = new Date(d + 'T00:00:00');
+                const day = dateObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                const weekday = dateObj.toLocaleDateString('en-IN', { weekday: 'short' });
+                return `
+                <div onclick="selectArchiveDate('${d}')" style="
+                    background:var(--bg-card2);
+                    border:1px solid var(--border);
+                    border-radius:10px;
+                    padding:0.9rem;
+                    cursor:pointer;
+                    text-align:center;
+                    transition:all 0.2s;
+                " onmouseover="this.style.borderColor='#7c3aed'; this.style.transform='translateY(-2px)'"
+                   onmouseout="this.style.borderColor='var(--border)'; this.style.transform='translateY(0)'">
+                    <div style="font-size:1.1rem; font-weight:800; color:var(--text);">${day}</div>
+                    <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.2rem;">${weekday}</div>
+                    <div style="font-size:0.68rem; color:#7c3aed; margin-top:0.4rem; font-weight:600;">3 briefs</div>
+                </div>`;
+            }).join('');
+        } catch(e) {
+            document.getElementById('archiveGrid').innerHTML = '<div style="color:var(--text-muted); font-size:0.82rem;">Could not load archive.</div>';
+        }
+    }
+
+    function selectArchiveDate(d) {
+        document.getElementById('dateInput').value = d;
+        const dateObj = new Date(d + 'T00:00:00');
+        const display = dateObj.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        document.getElementById('todayDisplay').textContent = display;
+        loadPageData();
+        closePanel();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
     // Init
     loadPageData();
+    loadArchive();
 </script>
 </body>
 </html>
