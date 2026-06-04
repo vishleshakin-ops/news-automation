@@ -281,26 +281,35 @@ def run_post(slot, public_base_url=None):
         return {"ok": False, "error": f"build failed: {e}"}
 
     result = {"slot": slot, "title": post["title"]}
+    caption = post["fb_text"]
 
-    # --- Facebook (required) ---
-    result["facebook"] = social.post_to_facebook(post["fb_text"], link=SITE_LINK)
+    # --- Generate the branded card image once, host it for both platforms ---
+    image_url = None
+    try:
+        fname = f"{slot}_{datetime.now(INDIA_TZ).strftime('%Y%m%d')}.jpg"
+        img_path = image_gen.generate_post_image(
+            post["title"], post["time_label"], post["ig_lines"], fname)
+        if img_path:
+            # Prefer imgbb (Meta/FB fetch it reliably); fall back to Railway static
+            image_url = image_gen.upload_to_imgbb(img_path)
+            if not image_url and public_base_url:
+                image_url = f"{public_base_url.rstrip('/')}/static/posts/{os.path.basename(img_path)}"
+    except Exception as e:
+        print(f"image gen/host failed: {e}")
 
-    # --- Instagram (best-effort) ---
-    if social.META_IG_USER_ID and public_base_url:
-        try:
-            fname = f"{slot}_{datetime.now(INDIA_TZ).strftime('%Y%m%d')}.jpg"
-            img_path = image_gen.generate_post_image(
-                post["title"], post["time_label"], post["ig_lines"], fname)
-            if img_path:
-                # Prefer imgbb (Meta fetches it reliably); fall back to Railway static
-                image_url = image_gen.upload_to_imgbb(img_path)
-                if not image_url:
-                    image_url = f"{public_base_url.rstrip('/')}/static/posts/{os.path.basename(img_path)}"
-                caption = post["fb_text"]
-                result["instagram"] = social.post_to_instagram(image_url, caption)
-        except Exception as e:
-            result["instagram"] = {"ok": False, "error": str(e)}
+    # --- Facebook (required): branded photo if image available, else text ---
+    if image_url:
+        result["facebook"] = social.post_photo_to_facebook(image_url, caption)
+        # Fallback to text post if photo fails for any reason
+        if not result["facebook"].get("ok"):
+            result["facebook"] = social.post_to_facebook(caption, link=SITE_LINK)
     else:
-        result["instagram"] = {"ok": False, "error": "IG not configured (optional)"}
+        result["facebook"] = social.post_to_facebook(caption, link=SITE_LINK)
+
+    # --- Instagram (best-effort): needs hosted image ---
+    if social.META_IG_USER_ID and image_url:
+        result["instagram"] = social.post_to_instagram(image_url, caption)
+    else:
+        result["instagram"] = {"ok": False, "error": "IG not configured or no image"}
 
     return result

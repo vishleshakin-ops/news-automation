@@ -103,6 +103,27 @@ def post_to_facebook(message, link=None):
         return {"ok": False, "error": str(e)}
 
 
+def post_photo_to_facebook(image_url, caption):
+    """
+    Post a PHOTO (branded card) with caption to the Facebook Page.
+    Looks far more polished than text-only. Returns {"ok": bool, "id"/"error": ...}.
+    """
+    token = get_page_token()
+    if not (token and META_PAGE_ID):
+        return {"ok": False, "error": "Facebook not configured"}
+    try:
+        resp = requests.post(
+            f"{GRAPH}/{META_PAGE_ID}/photos",
+            data={"url": image_url, "caption": caption, "access_token": token},
+            timeout=40,
+        ).json()
+        if "id" in resp or "post_id" in resp:
+            return {"ok": True, "id": resp.get("post_id", resp.get("id"))}
+        return {"ok": False, "error": resp.get("error", resp)}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 def post_to_instagram(image_url, caption):
     """
     Post an image to Instagram Business account (2-step: create container, then publish).
