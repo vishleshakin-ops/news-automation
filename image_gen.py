@@ -152,6 +152,106 @@ def _draw_arrow(d, x, y, length, color, thick=4):
     d.polygon([(x + length, cy - h), (x + length + 14, cy), (x + length, cy + h)], fill=color)
 
 
+# ── Blue/gold "list card" theme (matches the Top-10 sample) ──
+LC_BG_TOP = (38, 92, 205)      # royal blue
+LC_BG_BOTTOM = (22, 150, 150)  # teal
+LC_GOLD = (248, 226, 150)      # pale gold (title)
+LC_NUM = (245, 205, 95)        # number gold
+LC_ROW = (20, 58, 150)         # row fill
+LC_BORDER = (96, 150, 225)     # row border
+LC_DESC = (186, 206, 240)      # description text
+LC_TOPBAR = (247, 197, 47)     # gold top bar
+LC_FOOTER = (8, 12, 34)
+
+
+def _fit_text(d, text, font, maxw):
+    """Trim text to fit maxw pixels (adds … if trimmed)."""
+    if d.textlength(text, font=font) <= maxw:
+        return text
+    while text and d.textlength(text + "…", font=font) > maxw:
+        text = text[:-1]
+    return text.rstrip(" ,;:-") + "…"
+
+
+def _lc_gradient():
+    img = Image.new("RGB", (W, H), LC_BG_TOP)
+    d = ImageDraw.Draw(img)
+    for y in range(H):
+        t = y / H
+        r = int(LC_BG_TOP[0] + (LC_BG_BOTTOM[0] - LC_BG_TOP[0]) * t)
+        g = int(LC_BG_TOP[1] + (LC_BG_BOTTOM[1] - LC_BG_TOP[1]) * t)
+        b = int(LC_BG_TOP[2] + (LC_BG_BOTTOM[2] - LC_BG_TOP[2]) * t)
+        d.line([(0, y), (W, y)], fill=(r, g, b))
+    return img
+
+
+def generate_list_card(tag, title1, title2, subtitle, items, filename, brand_note=""):
+    """
+    Premium numbered-list card (matches the Top-10 watchlist sample).
+      tag       - small pill label (e.g. "9 AM PRE-MARKET")
+      title1    - first title line (white)
+      title2    - second title line (gold)
+      subtitle  - one-line descriptor
+      items     - list of (title, description) tuples (up to ~10)
+    """
+    if not PIL_AVAILABLE:
+        return None
+    os.makedirs(POSTS_DIR, exist_ok=True)
+    img = _lc_gradient()
+    d = ImageDraw.Draw(img)
+    PAD = 64
+
+    # Top gold bar
+    d.rectangle([0, 0, W, 14], fill=LC_TOPBAR)
+
+    # Tag pill (white, blue text)
+    tf = _font(28, "bold")
+    tag = tag.upper()
+    tw = d.textlength(tag, font=tf)
+    d.rounded_rectangle([PAD, 70, PAD + tw + 56, 126], radius=28, fill=WHITE)
+    d.text((PAD + 28, 82), tag, font=tf, fill=(30, 64, 175))
+
+    # Two-tone title
+    d.text((PAD - 4, 150), title1, font=_font(118, "bold"), fill=WHITE)
+    d.text((PAD - 4, 272), title2, font=_font(96, "bold"), fill=LC_GOLD)
+
+    # Subtitle
+    d.text((PAD, 388), subtitle, font=_font(31, "regular"), fill=LC_DESC)
+
+    # Numbered rows
+    items = items[:10]
+    top, bottom = 444, H - 150
+    row_h = (bottom - top) // max(len(items), 1) - 8
+    row_h = min(row_h, 92)
+    y = top
+    num_font = _font(34, "bold")
+    it_font = _font(29, "bold")
+    de_font = _font(22, "regular")
+    for i, (it_title, it_desc) in enumerate(items, 1):
+        d.rounded_rectangle([PAD, y, W - PAD, y + row_h], radius=14,
+                            fill=LC_ROW, outline=LC_BORDER, width=2)
+        d.text((PAD + 24, y + row_h / 2 - 18), f"{i:02d}", font=num_font, fill=LC_NUM)
+        tx = PAD + 110
+        maxw = (W - PAD) - tx - 24
+        d.text((tx, y + 12), _fit_text(d, it_title, it_font, maxw), font=it_font, fill=WHITE)
+        if it_desc:
+            d.text((tx, y + 48), _fit_text(d, it_desc, de_font, maxw), font=de_font, fill=LC_DESC)
+        y += row_h + 8
+
+    # Footer band
+    fy = H - 132
+    d.rectangle([0, fy, W, H], fill=LC_FOOTER)
+    d.text((PAD, fy + 28), "Vishleshak Market Brief", font=_font(34, "bold"), fill=WHITE)
+    d.text((PAD, fy + 78), brand_note or "AI-powered daily market intelligence  •  Educational only",
+           font=_font(21, "regular"), fill=MUTED)
+
+    if filename.lower().endswith(".png"):
+        filename = filename[:-4] + ".jpg"
+    path = os.path.join(POSTS_DIR, filename)
+    img.save(path, "JPEG", quality=94)
+    return path
+
+
 def generate_post_image(title, time_label, body_lines, filename):
     """Create a premium branded card. Returns saved path or None."""
     if not PIL_AVAILABLE:

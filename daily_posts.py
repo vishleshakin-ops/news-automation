@@ -15,7 +15,10 @@ The 5 posts:
   5) 6:00 PM  Tomorrow's Watchlist  — Nifty levels + stocks + sector to watch + global cues
 """
 import os
+import re
+import json
 import time
+import requests
 from datetime import datetime
 import pytz
 import yfinance as yf
@@ -28,6 +31,29 @@ except ImportError:
 import news_source
 import social
 import image_gen
+
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+WATCHLIST_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5")
+
+
+def _anthropic(prompt, max_tokens=700):
+    """Lightweight Anthropic call (Haiku 4.5). Returns text or None on failure."""
+    if not ANTHROPIC_API_KEY:
+        return None
+    try:
+        r = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={"x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01",
+                     "content-type": "application/json"},
+            json={"model": WATCHLIST_MODEL, "max_tokens": max_tokens,
+                  "messages": [{"role": "user", "content": prompt}]},
+            timeout=25,
+        )
+        r.raise_for_status()
+        return r.json()["content"][0]["text"]
+    except Exception as e:
+        print(f"anthropic error: {e}")
+        return None
 
 
 def _yf_session():
@@ -159,18 +185,70 @@ def _short(text, n=58):
     return text[:n].rsplit(" ", 1)[0].rstrip(",.;:-") + "…"
 
 
+def build_watchlist_items(nifty, sensex, movers, headlines, glob, inr):
+    """AI-written 'Top 10 Pre-Market Watchlist' (title + insight) grounded in REAL data.
+    Returns list of (title, desc) tuples, or None on failure (caller falls back)."""
+    g = ", ".join(f"{x['symbol']} {x['pct']:+.1f}%" for x in movers.get("gainers", [])[:3])
+    l = ", ".join(f"{x['symbol']} {x['pct']:+.1f}%" for x in movers.get("losers", [])[:3])
+    news = "; ".join(h["title"] for h in headlines[:5])
+    crude = glob.get("CL=F", {})
+    data = (f"Nifty prev close {nifty.get('price')} ({nifty.get('pct', 0):+.2f}%); "
+            f"Sensex {sensex.get('price')} ({sensex.get('pct', 0):+.2f}%); "
+            f"USD/INR {inr.get('price')}; Crude {crude.get('price')}; "
+            f"Top gainers: {g}; Top losers: {l}; Headlines: {news}")
+    prompt = (
+        "You are an Indian stock-market analyst writing a 9 AM PRE-MARKET 'Top 10 Watchlist' "
+        "for retail traders. Using ONLY the real data below, write EXACTLY 10 items. Each item = "
+        "a short TITLE (1-3 words: an index, stock, sector, or theme) + a brief INSIGHT "
+        "(STRICT max 7 words, plain English). RULES: Do NOT invent numbers, company full names, "
+        "sectors, or any fact not in the data — if unsure, keep it generic. Cover a useful mix: "
+        "Nifty setup, Bank Nifty, 1-2 stocks from the movers, a sector, RBI/policy, FII flow, a "
+        "commodity (gold/crude), midcaps, and a closing risk note. Educational tone, NO buy/sell "
+        'calls. Output ONLY a JSON array of objects with keys "title" and "desc". No markdown.\n\n'
+        f"DATA: {data}"
+    )
+    raw = _anthropic(prompt, 700)
+    if not raw:
+        return None
+    try:
+        m = re.search(r"\[.*\]", raw, re.S)
+        arr = json.loads(m.group(0) if m else raw)
+        items = [(str(o["title"]).strip(), str(o.get("desc", "")).strip())
+                 for o in arr if isinstance(o, dict) and o.get("title")]
+        return items[:10] if len(items) >= 6 else None
+    except Exception as e:
+        print(f"watchlist parse error: {e}")
+        return None
+
+
 # ----------------------------------------------------------------------------
 # THE 5 POST GENERATORS  → each returns dict {title, time_label, fb_text, ig_lines}
 # ----------------------------------------------------------------------------
 def post_premarket():
     macro = get_macro()
     glob = get_global()
+    movers = get_movers()
     headlines = news_source.get_top_headlines(limit=10, hours_back=18)
 
     nifty = macro.get("^NSEI", {})
     sensex = macro.get("^BSESN", {})
     inr = macro.get("INR=X", {})
 
+    # Preferred: AI 'Top 10 Watchlist' list-card (matches the premium sample design)
+    items = build_watchlist_items(nifty, sensex, movers, headlines, glob, inr)
+    if items:
+        cap = [f"📊 VISHLESHAK MARKET BRIEF — {_today_str()}", "",
+               "🌅 TOP 10 PRE-MARKET WATCHLIST", "", "What traders are watching before the bell", ""]
+        for i, (t, desc) in enumerate(items, 1):
+            cap.append(f"{i}. {t} — {desc}" if desc else f"{i}. {t}")
+        cap += ["", f"Full brief → {SITE_LINK}", "",
+                "#Nifty #Sensex #StockMarket #PreMarket #Vishleshak"]
+        return {"card_type": "list", "title": "Pre-Market Watchlist",
+                "tag": "9 AM Pre-Market", "title1": "Top 10", "title2": "Market Watchlist",
+                "subtitle": "What traders are watching before the bell",
+                "items": items, "fb_text": "\n".join(cap), "ig_lines": [t for t, _ in items]}
+
+    # Fallback: standard card with curated headlines
     lines = [f"📊 VISHLESHAK MARKET BRIEF — {_today_str()}", "", "🌅 PRE-MARKET WATCHLIST", ""]
     if nifty:
         lines.append(f"Nifty prev close: {_fmt(nifty['price'])} ({nifty['pct']:+.2f}%)")
@@ -329,10 +407,14 @@ def run_post(slot, public_base_url=None):
         return {"ok": False, "error": f"build failed: {e}"}
 
     result = {"slot": slot, "title": post["title"]}
+    is_list = post.get("card_type") == "list"
 
     # SAFETY GUARD — never post a blank card if data fetch failed
-    content_lines = [l for l in post.get("ig_lines", []) if l.strip()]
-    if len(content_lines) < 2:
+    if is_list:
+        has_content = len(post.get("items", [])) >= 5
+    else:
+        has_content = len([l for l in post.get("ig_lines", []) if l.strip()]) >= 2
+    if not has_content:
         result["skipped"] = True
         result["reason"] = "no market data (Yahoo unavailable) — skipped to avoid blank post"
         print(f"[SOCIAL {slot}] SKIPPED — no data")
@@ -344,8 +426,13 @@ def run_post(slot, public_base_url=None):
     image_url = None
     try:
         fname = f"{slot}_{datetime.now(INDIA_TZ).strftime('%Y%m%d')}.jpg"
-        img_path = image_gen.generate_post_image(
-            post["title"], post["time_label"], post["ig_lines"], fname)
+        if is_list:
+            img_path = image_gen.generate_list_card(
+                post["tag"], post["title1"], post["title2"], post["subtitle"],
+                post["items"], fname)
+        else:
+            img_path = image_gen.generate_post_image(
+                post["title"], post["time_label"], post["ig_lines"], fname)
         if img_path:
             # Prefer imgbb (Meta/FB fetch it reliably); fall back to Railway static
             image_url = image_gen.upload_to_imgbb(img_path)
