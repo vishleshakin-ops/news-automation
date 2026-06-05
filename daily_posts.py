@@ -185,8 +185,8 @@ def _short(text, n=58):
     return text[:n].rsplit(" ", 1)[0].rstrip(",.;:-") + "…"
 
 
-def build_watchlist_items(nifty, sensex, movers, headlines, glob, inr):
-    """AI-written 'Top 10 Pre-Market Watchlist' (title + insight) grounded in REAL data.
+def build_watchlist_items(nifty, sensex, movers, headlines, glob, inr, limit=8):
+    """AI-written Pre-Market Watchlist (title + insight) grounded in REAL data.
     Returns list of (title, desc) tuples, or None on failure (caller falls back)."""
     g = ", ".join(f"{x['symbol']} {x['pct']:+.1f}%" for x in movers.get("gainers", [])[:3])
     l = ", ".join(f"{x['symbol']} {x['pct']:+.1f}%" for x in movers.get("losers", [])[:3])
@@ -197,8 +197,8 @@ def build_watchlist_items(nifty, sensex, movers, headlines, glob, inr):
             f"USD/INR {inr.get('price')}; Crude {crude.get('price')}; "
             f"Top gainers: {g}; Top losers: {l}; Headlines: {news}")
     prompt = (
-        "You are an Indian stock-market analyst writing a 9 AM PRE-MARKET 'Top 10 Watchlist' "
-        "for retail traders. Using ONLY the real data below, write EXACTLY 10 items. Each item = "
+        f"You are an Indian stock-market analyst writing a PRE-MARKET Watchlist for retail traders. "
+        f"Using ONLY the real data below, write EXACTLY {limit} items. Each item = "
         "a short TITLE (1-3 words: an index, stock, sector, or theme) + a brief INSIGHT "
         "(STRICT max 7 words, plain English). RULES: Do NOT invent numbers, company full names, "
         "sectors, or any fact not in the data — if unsure, keep it generic. Cover a useful mix: "
@@ -215,7 +215,7 @@ def build_watchlist_items(nifty, sensex, movers, headlines, glob, inr):
         arr = json.loads(m.group(0) if m else raw)
         items = [(str(o["title"]).strip(), str(o.get("desc", "")).strip())
                  for o in arr if isinstance(o, dict) and o.get("title")]
-        return items[:10] if len(items) >= 6 else None
+        return items[:limit] if len(items) >= max(limit - 2, 4) else None
     except Exception as e:
         print(f"watchlist parse error: {e}")
         return None
@@ -234,19 +234,52 @@ def post_premarket():
     sensex = macro.get("^BSESN", {})
     inr = macro.get("INR=X", {})
 
-    # Preferred: AI 'Top 10 Watchlist' list-card (matches the premium sample design)
-    items = build_watchlist_items(nifty, sensex, movers, headlines, glob, inr)
-    if items:
+    # Preferred: AI 'Top 8 Watchlist' list-card + global snapshot banner + commodities
+    watchlist_items = build_watchlist_items(nifty, sensex, movers, headlines, glob, inr, limit=8)
+    if watchlist_items:
+        # Build the card items list: Gold/Silver, Nifty/Sensex, then 8 watchlist insights
+        card_items = []
+
+        # Row 1: Gold / Silver (prior day close)
+        gold = glob.get("GC=F", {})
+        silver = glob.get("SI=F", {})
+        gold_str = f"${gold['price']:.2f}" if gold else "N/A"
+        silver_str = f"${silver['price']:.2f}" if silver else "N/A"
+        card_items.append((f"Gold / Silver", f"{gold_str} / {silver_str}"))
+
+        # Row 2: Nifty / Sensex (prior day closing)
+        nifty_str = f"{_fmt(nifty['price'])} ({nifty['pct']:+.2f}%)" if nifty else "N/A"
+        sensex_str = f"{_fmt(sensex['price'])} ({sensex['pct']:+.2f}%)" if sensex else "N/A"
+        card_items.append((f"Nifty / Sensex", f"{nifty_str} / {sensex_str}"))
+
+        # Rows 3-10: Top 8 watchlist insights
+        card_items.extend(watchlist_items)
+
+        # Global snapshot banner
+        dow = glob.get("^DJI", {})
+        crude = glob.get("CL=F", {})
+        banner_parts = []
+        if dow:
+            banner_parts.append(f"Dow {dow['pct']:+.2f}%")
+        if crude:
+            banner_parts.append(f"Crude ${crude['price']:.2f}")
+        if inr:
+            banner_parts.append(f"USD/INR ₹{inr['price']:.2f}")
+        banner = " | ".join(banner_parts) if banner_parts else ""
+
+        # Caption for FB/IG
         cap = [f"📊 VISHLESHAK MARKET BRIEF — {_today_str()}", "",
-               "🌅 TOP 10 PRE-MARKET WATCHLIST", "", "What traders are watching before the bell", ""]
-        for i, (t, desc) in enumerate(items, 1):
+               "🌅 PRE-MARKET WATCHLIST (Today's Setup)", "", "What traders are watching before the bell", ""]
+        for i, (t, desc) in enumerate(card_items, 1):
             cap.append(f"{i}. {t} — {desc}" if desc else f"{i}. {t}")
         cap += ["", f"Full brief → {SITE_LINK}", "",
                 "#Nifty #Sensex #StockMarket #PreMarket #Vishleshak"]
+
         return {"card_type": "list", "title": "Pre-Market Watchlist",
-                "tag": "9 AM Pre-Market", "title1": "Top 10", "title2": "Market Watchlist",
+                "tag": "9 AM Pre-Market", "title1": "Pre-Market", "title2": "Watchlist",
                 "subtitle": "What traders are watching before the bell",
-                "items": items, "fb_text": "\n".join(cap), "ig_lines": [t for t, _ in items]}
+                "items": card_items, "banner": banner,
+                "fb_text": "\n".join(cap), "ig_lines": [t for t, _ in card_items]}
 
     # Fallback: standard card with curated headlines
     lines = [f"📊 VISHLESHAK MARKET BRIEF — {_today_str()}", "", "🌅 PRE-MARKET WATCHLIST", ""]
@@ -275,10 +308,57 @@ def post_premarket():
 
 def post_closing():
     macro = get_macro()
-    headlines = news_source.get_top_headlines(limit=10, hours_back=8)
+    headlines = news_source.get_top_headlines(limit=10, hours_back=8)  # market-moving news from session
+    sector = get_sector_performance()
     nifty = macro.get("^NSEI", {})
     sensex = macro.get("^BSESN", {})
 
+    # Try list-card format: indices + sector + news
+    if headlines and len(headlines) >= 5:
+        card_items = []
+
+        # Row 1-2: Indices
+        card_items.append((f"Nifty 50", f"{_fmt(nifty['price'])} ({nifty['pct']:+.2f}%)" if nifty else "N/A"))
+        card_items.append((f"Sensex", f"{_fmt(sensex['price'])} ({sensex['pct']:+.2f}%)" if sensex else "N/A"))
+
+        # Row 3: Sector leader/laggard
+        if sector:
+            lname, lpct = sector["leader"]
+            gname, gpct = sector["laggard"]
+            leader_str = f"{lname} +{lpct:.2f}%"
+            laggard_str = f"{gname} {gpct:+.2f}%"
+            card_items.append((f"Sector moves", f"{leader_str} / {laggard_str}"))
+        else:
+            card_items.append((f"Sector data", "Check market tracker"))
+
+        # Rows 4-10: Top 7 market-moving news from session
+        for h in headlines[:7]:
+            card_items.append((h["title"][:40], h["source"]))  # title + source as description
+
+        # Caption for FB/IG
+        cap = [f"📊 VISHLESHAK MARKET BRIEF — {_today_str()}", "",
+               "🌄 CLOSING MARKET WRAP (How the session ended)", ""]
+        if nifty:
+            cap.append(f"Nifty 50: {_fmt(nifty['price'])} ({nifty['pct']:+.2f}%)")
+        if sensex:
+            cap.append(f"Sensex: {_fmt(sensex['price'])} ({sensex['pct']:+.2f}%)")
+        if sector:
+            lname, lpct = sector["leader"]
+            gname, gpct = sector["laggard"]
+            cap.append(f"📊 Sector leader: {lname} ({lpct:+.2f}%) | Laggard: {gname} ({gpct:+.2f}%)")
+        cap += ["", "📰 Market-moving news from the session:"]
+        for i, h in enumerate(headlines[:7], 1):
+            cap.append(f"{i}. {h['title']}")
+        cap += ["", f"Full brief → {SITE_LINK}", "",
+                "#ClosingBell #MarketWrap #Nifty #Sensex #Vishleshak"]
+
+        return {"card_type": "list", "title": "Closing Market Wrap",
+                "tag": "4 PM Closing Bell", "title1": "Closing", "title2": "Market Wrap",
+                "subtitle": "How the session ended",
+                "items": card_items, "fb_text": "\n".join(cap),
+                "ig_lines": [t for t, _ in card_items[:5]]}
+
+    # Fallback: standard card format
     lines = [f"📊 VISHLESHAK MARKET BRIEF — {_today_str()}", "", "🌄 CLOSING MARKET SUMMARY", ""]
     if nifty:
         lines.append(f"{_arrow(nifty['pct'])} Nifty 50: {_fmt(nifty['price'])} ({nifty['pct']:+.2f}%)")
@@ -299,20 +379,34 @@ def post_closing():
 
 def post_movers():
     m = get_movers()
-    lines = [f"📊 VISHLESHAK MARKET BRIEF — {_today_str()}", "", "🏆 TOP 5 GAINERS & LOSERS", "",
-             "📈 GAINERS:"]
-    for g in m["gainers"]:
-        lines.append(f"  {g['symbol']}  +{g['pct']:.2f}%  (₹{g['price']:,.2f})")
-    lines += ["", "📉 LOSERS:"]
-    for l in m["losers"]:
-        lines.append(f"  {l['symbol']}  {l['pct']:.2f}%  (₹{l['price']:,.2f})")
-    lines += ["", f"Full brief → {SITE_LINK}", "",
-              "#TopGainers #TopLosers #Nifty #StockMarket #Vishleshak"]
-    fb_text = "\n".join(lines)
-    ig_lines = ["📈 GAINERS"] + [f"+ {g['symbol']} +{g['pct']:.2f}%" for g in m["gainers"]] + \
-               ["", "📉 LOSERS"] + [f"- {l['symbol']} {l['pct']:.2f}%" for l in m["losers"]]
-    return {"title": "Top 5 Gainers & Losers", "time_label": f"4:15 PM • {_today_str()}",
-            "fb_text": fb_text, "ig_lines": ig_lines}
+    # List-card format: 5 gainers + 5 losers with color coding
+    card_items = []
+
+    # Top 5 gainers (green)
+    for g in m["gainers"][:5]:
+        card_items.append((g["symbol"], f"+{g['pct']:.2f}%   •   Rs {g['price']:,.0f}", "green"))
+
+    # Top 5 losers (red)
+    for l in m["losers"][:5]:
+        card_items.append((l["symbol"], f"{l['pct']:.2f}%   •   Rs {l['price']:,.0f}", "red"))
+
+    # Caption for FB/IG
+    cap = [f"📊 VISHLESHAK MARKET BRIEF — {_today_str()}", "", "🏆 TOP 5 GAINERS & LOSERS", ""]
+    cap.append("📈 GAINERS:")
+    for g in m["gainers"][:5]:
+        cap.append(f"  {g['symbol']}  +{g['pct']:.2f}%  (₹{g['price']:,.2f})")
+    cap.append("")
+    cap.append("📉 LOSERS:")
+    for l in m["losers"][:5]:
+        cap.append(f"  {l['symbol']}  {l['pct']:.2f}%  (₹{l['price']:,.2f})")
+    cap += ["", f"Full brief → {SITE_LINK}", "",
+            "#TopGainers #TopLosers #Nifty #StockMarket #Vishleshak"]
+
+    return {"card_type": "list", "title": "Gainers & Losers",
+            "tag": "4:15 PM Movers", "title1": "Top 5", "title2": "Gainers & Losers",
+            "subtitle": "The biggest single-stock moves today",
+            "items": card_items, "fb_text": "\n".join(cap),
+            "ig_lines": [f"{t}: {d}" for t, d, _ in card_items[:5]]}
 
 
 def post_summary_sheet():
@@ -427,9 +521,10 @@ def run_post(slot, public_base_url=None):
     try:
         fname = f"{slot}_{datetime.now(INDIA_TZ).strftime('%Y%m%d')}.jpg"
         if is_list:
+            banner = post.get("banner", "")
             img_path = image_gen.generate_list_card(
                 post["tag"], post["title1"], post["title2"], post["subtitle"],
-                post["items"], fname)
+                post["items"], fname, banner=banner)
         else:
             img_path = image_gen.generate_post_image(
                 post["title"], post["time_label"], post["ig_lines"], fname)

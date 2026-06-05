@@ -159,9 +159,11 @@ LC_GOLD = (248, 226, 150)      # pale gold (title)
 LC_NUM = (245, 205, 95)        # number gold
 LC_ROW = (20, 58, 150)         # row fill
 LC_BORDER = (96, 150, 225)     # row border
-LC_DESC = (186, 206, 240)      # description text
+LC_DESC = (240, 244, 252)      # description text — BRIGHTENED to near-white
 LC_TOPBAR = (247, 197, 47)     # gold top bar
 LC_FOOTER = (8, 12, 34)
+LC_GREEN = (76, 224, 140)      # bright green for gainers
+LC_RED = (255, 100, 110)       # bright red for losers
 
 
 def _fit_text(d, text, font, maxw):
@@ -185,14 +187,15 @@ def _lc_gradient():
     return img
 
 
-def generate_list_card(tag, title1, title2, subtitle, items, filename, brand_note=""):
+def generate_list_card(tag, title1, title2, subtitle, items, filename, brand_note="", banner=""):
     """
     Premium numbered-list card (matches the Top-10 watchlist sample).
       tag       - small pill label (e.g. "9 AM PRE-MARKET")
       title1    - first title line (white)
       title2    - second title line (gold)
       subtitle  - one-line descriptor
-      items     - list of (title, description) tuples (up to ~10)
+      items     - list of (title, description, color_hint) tuples (color_hint optional: "green"/"red"/None)
+      banner    - optional top banner text (e.g. "Global: Dow +0.5% | Crude $92")
     """
     if not PIL_AVAILABLE:
         return None
@@ -216,18 +219,39 @@ def generate_list_card(tag, title1, title2, subtitle, items, filename, brand_not
     d.text((PAD - 4, 272), title2, font=_font(96, "bold"), fill=LC_GOLD)
 
     # Subtitle
-    d.text((PAD, 388), subtitle, font=_font(31, "regular"), fill=LC_DESC)
+    y_pos = 388
+    d.text((PAD, y_pos), subtitle, font=_font(31, "regular"), fill=LC_DESC)
+
+    # Optional banner (global snapshot, etc.) — bright white text
+    if banner:
+        y_pos += 60
+        d.text((PAD, y_pos), banner, font=_font(24, "regular"), fill=WHITE)
 
     # Numbered rows
     items = items[:10]
-    top, bottom = 444, H - 150
+    top = y_pos + 56 if banner else 444
+    bottom = H - 150
     row_h = (bottom - top) // max(len(items), 1) - 8
     row_h = min(row_h, 92)
     y = top
     num_font = _font(34, "bold")
     it_font = _font(29, "bold")
     de_font = _font(22, "regular")
-    for i, (it_title, it_desc) in enumerate(items, 1):
+    for i, item_data in enumerate(items, 1):
+        # Handle both 2-tuple (title, desc) and 3-tuple (title, desc, color)
+        if len(item_data) == 3:
+            it_title, it_desc, color_hint = item_data
+        else:
+            it_title, it_desc = item_data
+            color_hint = None
+
+        # Color logic: bright green for gainers, bright red for losers
+        desc_color = LC_DESC  # default: bright white
+        if color_hint == "green":
+            desc_color = LC_GREEN  # bright green
+        elif color_hint == "red":
+            desc_color = LC_RED  # bright red
+
         d.rounded_rectangle([PAD, y, W - PAD, y + row_h], radius=14,
                             fill=LC_ROW, outline=LC_BORDER, width=2)
         d.text((PAD + 24, y + row_h / 2 - 18), f"{i:02d}", font=num_font, fill=LC_NUM)
@@ -235,7 +259,7 @@ def generate_list_card(tag, title1, title2, subtitle, items, filename, brand_not
         maxw = (W - PAD) - tx - 24
         d.text((tx, y + 12), _fit_text(d, it_title, it_font, maxw), font=it_font, fill=WHITE)
         if it_desc:
-            d.text((tx, y + 48), _fit_text(d, it_desc, de_font, maxw), font=de_font, fill=LC_DESC)
+            d.text((tx, y + 48), _fit_text(d, it_desc, de_font, maxw), font=de_font, fill=desc_color)
         y += row_h + 8
 
     # Footer band

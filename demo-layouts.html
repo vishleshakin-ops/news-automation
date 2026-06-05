@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Layout Demo — Vishleshak Market Brief</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0a0a0f; color: #f1f5f9; }
+
+        .demo-nav {
+            background: #1a1a2e;
+            padding: 1rem 2rem;
+            display: flex;
+            gap: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 999;
+            border-bottom: 1px solid #333;
+        }
+        .demo-nav a {
+            color: #a78bfa;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+        .demo-nav a:hover { background: #2d1b69; }
+
+        .demo-section {
+            min-height: 100vh;
+            padding: 2rem;
+            border-bottom: 3px solid #7c3aed;
+        }
+
+        .demo-label {
+            text-align: center;
+            padding: 1rem;
+            background: linear-gradient(135deg, #7c3aed, #3b82f6);
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            font-size: 1.3rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        /* ─── SHARED HEADER ─── */
+        .site-header {
+            background: #12002e;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+        }
+        .site-header .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        .site-header .logo-box {
+            width: 38px; height: 38px;
+            background: #7c3aed;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 900; font-size: 1.2rem;
+        }
+        .site-header .logo-text { font-size: 1rem; font-weight: 700; }
+        .site-header .logo-sub { font-size: 0.7rem; color: #a78bfa; }
+        .site-header .socials { display: flex; gap: 0.8rem; }
+        .site-header .socials a {
+            background: #1e1040;
+            border: 1px solid #7c3aed;
+            color: #a78bfa;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .today-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1e1040;
+            border: 1px solid #7c3aed;
+            padding: 0.8rem 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+        }
+        .today-bar .date { font-size: 1rem; font-weight: 700; }
+        .today-bar .live {
+            display: flex; align-items: center; gap: 0.5rem;
+            color: #10b981; font-size: 0.85rem; font-weight: 600;
+        }
+        .dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+
+        /* ═══════════════════════════════════════
+           OPTION A — TIMELINE
+        ═══════════════════════════════════════ */
+        .timeline { position: relative; padding-left: 2rem; }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #7c3aed, #3b82f6, #7c3aed);
+        }
+        .tl-item {
+            position: relative;
+            margin-bottom: 1.5rem;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 1.2rem 1.5rem;
+            transition: all 0.3s;
+        }
+        .tl-item:hover { border-color: #7c3aed; transform: translateX(5px); }
+        .tl-item::before {
+            content: '';
+            position: absolute;
+            left: -2.45rem;
+            top: 1.5rem;
+            width: 12px; height: 12px;
+            background: #7c3aed;
+            border-radius: 50%;
+            border: 2px solid #0a0a0f;
+        }
+        .tl-time { font-size: 0.75rem; color: #7c3aed; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.3rem; }
+        .tl-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.4rem; }
+        .tl-desc { font-size: 0.85rem; color: #94a3b8; line-height: 1.5; margin-bottom: 0.8rem; }
+        .tl-footer { display: flex; justify-content: space-between; align-items: center; }
+        .tl-btn { background: #7c3aed; color: white; border: none; padding: 0.4rem 1rem; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+        .tl-read { font-size: 0.78rem; color: #64748b; }
+
+
+        /* ═══════════════════════════════════════
+           OPTION B — BIG FEATURE + 3 SMALL
+        ═══════════════════════════════════════ */
+        .feature-card {
+            background: linear-gradient(135deg, #4c1d95, #1d4ed8);
+            border-radius: 14px;
+            padding: 2rem;
+            margin-bottom: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .feature-card::after {
+            content: '🌄';
+            position: absolute;
+            right: 2rem; top: 50%;
+            transform: translateY(-50%);
+            font-size: 4rem;
+            opacity: 0.2;
+        }
+        .feature-badge { background: rgba(255,255,255,0.2); display: inline-block; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.8rem; }
+        .feature-time { font-size: 0.8rem; color: rgba(255,255,255,0.7); margin-bottom: 0.4rem; }
+        .feature-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 0.8rem; line-height: 1.2; }
+        .feature-meta { display: flex; gap: 1rem; margin-bottom: 1.2rem; }
+        .feature-tag { background: rgba(255,255,255,0.15); padding: 0.3rem 0.8rem; border-radius: 6px; font-size: 0.8rem; }
+        .feature-btn { background: white; color: #4c1d95; border: none; padding: 0.6rem 1.5rem; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.9rem; }
+
+        .small-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; }
+        .small-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 1rem; transition: all 0.3s; }
+        .small-card:hover { border-color: #7c3aed; transform: translateY(-3px); }
+        .small-icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        .small-time { font-size: 0.7rem; color: #7c3aed; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .small-title { font-size: 0.9rem; font-weight: 700; margin: 0.3rem 0; }
+        .small-desc { font-size: 0.78rem; color: #94a3b8; line-height: 1.4; margin-bottom: 0.8rem; }
+        .small-btn { background: transparent; border: 1px solid #7c3aed; color: #a78bfa; padding: 0.3rem 0.8rem; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer; width: 100%; }
+
+
+        /* ═══════════════════════════════════════
+           OPTION C — WHATSAPP FEED STYLE
+        ═══════════════════════════════════════ */
+        .feed-container { max-width: 520px; margin: 0 auto; }
+        .feed-date-divider {
+            text-align: center;
+            margin: 1rem 0;
+            position: relative;
+        }
+        .feed-date-divider::before {
+            content: '';
+            position: absolute;
+            left: 0; right: 0; top: 50%;
+            height: 1px;
+            background: #334155;
+        }
+        .feed-date-divider span {
+            background: #0a0a0f;
+            padding: 0 1rem;
+            position: relative;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+        .feed-msg {
+            background: #1a2744;
+            border-left: 3px solid #7c3aed;
+            border-radius: 0 12px 12px 0;
+            padding: 1rem 1.2rem;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+        .feed-msg-time { font-size: 0.7rem; color: #7c3aed; font-weight: 700; margin-bottom: 0.4rem; }
+        .feed-msg-icon { font-size: 1.5rem; margin-bottom: 0.4rem; }
+        .feed-msg-title { font-size: 1rem; font-weight: 700; margin-bottom: 0.3rem; }
+        .feed-msg-text { font-size: 0.82rem; color: #94a3b8; line-height: 1.5; margin-bottom: 0.8rem; }
+        .feed-msg-footer { display: flex; justify-content: space-between; align-items: center; }
+        .feed-btn { background: #7c3aed; color: white; border: none; padding: 0.4rem 1rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+        .feed-timestamp { font-size: 0.7rem; color: #475569; }
+
+        .max-w { max-width: 700px; margin: 0 auto; }
+    </style>
+</head>
+<body>
+
+<!-- Demo Navigation -->
+<div class="demo-nav">
+    <span style="color:#fff; font-weight:700; margin-right:0.5rem;">Pick Layout:</span>
+    <a href="#optionA">A — Timeline</a>
+    <a href="#optionB">B — Feature+3</a>
+    <a href="#optionC">C — Feed Style</a>
+</div>
+
+
+<!-- ═══════════ OPTION A ═══════════ -->
+<div class="demo-section" id="optionA">
+    <div class="demo-label">⭐ OPTION A — Timeline (Recommended)</div>
+
+    <div class="max-w">
+        <!-- Header -->
+        <div class="site-header">
+            <div class="logo">
+                <div class="logo-box">V</div>
+                <div>
+                    <div class="logo-text">Vishleshak Market Brief</div>
+                    <div class="logo-sub">AI-powered daily market intelligence</div>
+                </div>
+            </div>
+            <div class="socials">
+                <a href="#">📸 Instagram</a>
+                <a href="#">👍 Facebook</a>
+            </div>
+        </div>
+
+        <!-- Today Bar -->
+        <div class="today-bar">
+            <div class="date">📅 Wednesday, June 4, 2026</div>
+            <div class="live"><div class="dot"></div> Live & Updated</div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="timeline">
+            <div class="tl-item">
+                <div class="tl-time">🌅 09:00 AM — Pre-Market</div>
+                <div class="tl-title">Pre-Market Watchlist</div>
+                <div class="tl-desc">Reliance +2.5% tracking, TCS overnight ADR up. Key levels to watch: Nifty 22,400 support. RBI data release at 10 AM.</div>
+                <div class="tl-footer">
+                    <button class="tl-btn">Read Brief →</button>
+                    <span class="tl-read">5-10 min read</span>
+                </div>
+            </div>
+
+            <div class="tl-item">
+                <div class="tl-time">📰 Throughout Day — Headlines</div>
+                <div class="tl-title">Top 10 Business Headlines</div>
+                <div class="tl-desc">India's GDP revised upward, Infosys wins $2B contract, Adani ports expansion news, RBI holds rates steady.</div>
+                <div class="tl-footer">
+                    <button class="tl-btn">Read Brief →</button>
+                    <span class="tl-read">8-12 min read</span>
+                </div>
+            </div>
+
+            <div class="tl-item" style="border-color:#7c3aed;">
+                <div class="tl-time">🌄 04:00 PM — Market Close</div>
+                <div class="tl-title">Closing Market Summary</div>
+                <div class="tl-desc">Nifty closed +0.8% at 22,520. Sensex +1.2%. IT sector led gains, Auto under pressure. FII net buyers ₹1,200Cr.</div>
+                <div class="tl-footer">
+                    <button class="tl-btn">Read Brief →</button>
+                    <span class="tl-read">6-10 min read</span>
+                </div>
+            </div>
+
+            <div class="tl-item">
+                <div class="tl-time">💡 Evening — Key Takeaway</div>
+                <div class="tl-title">Key Takeaway</div>
+                <div class="tl-desc">Focus on large-cap IT and energy names. NBFC space showing weakness — avoid until Q1 results clarity.</div>
+                <div class="tl-footer">
+                    <button class="tl-btn">Read Brief →</button>
+                    <span class="tl-read">4-6 min read</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════ OPTION B ═══════════ -->
+<div class="demo-section" id="optionB">
+    <div class="demo-label">OPTION B — Feature Card + 3 Small</div>
+
+    <div class="max-w">
+        <div class="site-header">
+            <div class="logo">
+                <div class="logo-box">V</div>
+                <div>
+                    <div class="logo-text">Vishleshak Market Brief</div>
+                    <div class="logo-sub">AI-powered daily market intelligence</div>
+                </div>
+            </div>
+            <div class="socials">
+                <a href="#">📸 Instagram</a>
+                <a href="#">👍 Facebook</a>
+            </div>
+        </div>
+
+        <div class="today-bar">
+            <div class="date">📅 Wednesday, June 4, 2026</div>
+            <div class="live"><div class="dot"></div> Live & Updated</div>
+        </div>
+
+        <!-- Feature Card -->
+        <div class="feature-card">
+            <div class="feature-badge">⭐ Today's Highlight</div>
+            <div class="feature-time">🌄 04:00 PM — Closing Summary</div>
+            <div class="feature-title">Nifty +0.8% — IT & Energy Lead Gains</div>
+            <div class="feature-meta">
+                <span class="feature-tag">Nifty 22,520</span>
+                <span class="feature-tag">Sensex +1.2%</span>
+                <span class="feature-tag">FII: Buyers</span>
+            </div>
+            <button class="feature-btn">Read Full Brief →</button>
+        </div>
+
+        <!-- 3 Small Cards -->
+        <div class="small-grid">
+            <div class="small-card">
+                <div class="small-icon">🌅</div>
+                <div class="small-time">09:00 AM</div>
+                <div class="small-title">Pre-Market Watchlist</div>
+                <div class="small-desc">Key movers before open. Reliance, TCS levels to watch.</div>
+                <button class="small-btn">View Brief</button>
+            </div>
+            <div class="small-card">
+                <div class="small-icon">📰</div>
+                <div class="small-time">Throughout Day</div>
+                <div class="small-title">Top 10 Headlines</div>
+                <div class="small-desc">Today's biggest business stories curated by AI.</div>
+                <button class="small-btn">View Brief</button>
+            </div>
+            <div class="small-card">
+                <div class="small-icon">💡</div>
+                <div class="small-time">Evening</div>
+                <div class="small-title">Key Takeaway</div>
+                <div class="small-desc">What today's market means for your portfolio.</div>
+                <button class="small-btn">View Brief</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════ OPTION C ═══════════ -->
+<div class="demo-section" id="optionC">
+    <div class="demo-label">OPTION C — Feed / WhatsApp Style</div>
+
+    <div class="max-w">
+        <div class="site-header">
+            <div class="logo">
+                <div class="logo-box">V</div>
+                <div>
+                    <div class="logo-text">Vishleshak Market Brief</div>
+                    <div class="logo-sub">@vishleshak.market.brief</div>
+                </div>
+            </div>
+            <div class="socials">
+                <a href="#">📸 Instagram</a>
+                <a href="#">👍 Facebook</a>
+            </div>
+        </div>
+
+        <div class="feed-container">
+            <div class="feed-date-divider"><span>Wednesday, June 4, 2026</span></div>
+
+            <div class="feed-msg">
+                <div class="feed-msg-time">🕘 09:00 AM</div>
+                <div class="feed-msg-icon">🌅</div>
+                <div class="feed-msg-title">Pre-Market Watchlist</div>
+                <div class="feed-msg-text">Reliance +2.5% tracking. TCS ADR up overnight. Key levels: Nifty 22,400 support. Watch RBI data at 10 AM.</div>
+                <div class="feed-msg-footer">
+                    <button class="feed-btn">Read Brief →</button>
+                    <span class="feed-timestamp">5-10 min • 9:00 AM</span>
+                </div>
+            </div>
+
+            <div class="feed-msg">
+                <div class="feed-msg-time">🕛 Throughout Day</div>
+                <div class="feed-msg-icon">📰</div>
+                <div class="feed-msg-title">Top 10 Headlines</div>
+                <div class="feed-msg-text">India GDP revised upward. Infosys $2B contract win. Adani ports expansion. RBI holds rates.</div>
+                <div class="feed-msg-footer">
+                    <button class="feed-btn">Read Brief →</button>
+                    <span class="feed-timestamp">8-12 min • Updated</span>
+                </div>
+            </div>
+
+            <div class="feed-msg" style="border-color:#3b82f6; background:#0f2044;">
+                <div class="feed-msg-time">🕓 04:00 PM — Latest</div>
+                <div class="feed-msg-icon">🌄</div>
+                <div class="feed-msg-title">Closing Market Summary</div>
+                <div class="feed-msg-text">Nifty +0.8% at 22,520. Sensex +1.2%. IT & Energy led. FII net buyers ₹1,200Cr. Auto sector weak.</div>
+                <div class="feed-msg-footer">
+                    <button class="feed-btn">Read Brief →</button>
+                    <span class="feed-timestamp">6-10 min • 4:02 PM</span>
+                </div>
+            </div>
+
+            <div class="feed-msg">
+                <div class="feed-msg-time">🌙 Evening</div>
+                <div class="feed-msg-icon">💡</div>
+                <div class="feed-msg-title">Key Takeaway</div>
+                <div class="feed-msg-text">Focus on IT & energy large-caps. Avoid NBFC until Q1 results. Watch Nifty 22,600 resistance tomorrow.</div>
+                <div class="feed-msg-footer">
+                    <button class="feed-btn">Read Brief →</button>
+                    <span class="feed-timestamp">4-6 min • 6:00 PM</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
