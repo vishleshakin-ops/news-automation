@@ -183,7 +183,7 @@ def post_premarket():
         lines.append(f"Crude Oil: ${crude['price']:.2f} ({crude['pct']:+.2f}%)")
     lines.append("")
     lines.append("📰 TOP HEADLINES:")
-    for i, h in enumerate(headlines[:10], 1):
+    for i, h in enumerate(headlines[:5], 1):
         lines.append(f"{i}. {h['title']}")
     lines += ["", f"Full brief → {SITE_LINK}", "",
               "#Nifty #Sensex #StockMarket #PreMarket #Vishleshak"]
@@ -207,7 +207,7 @@ def post_closing():
     if sensex:
         lines.append(f"{_arrow(sensex['pct'])} Sensex: {_fmt(sensex['price'])} ({sensex['pct']:+.2f}%)")
     lines += ["", "📰 TODAY'S TOP FINANCE NEWS:"]
-    for i, h in enumerate(headlines[:10], 1):
+    for i, h in enumerate(headlines[:5], 1):
         lines.append(f"{i}. {h['title']}")
     lines += ["", f"Full brief → {SITE_LINK}", "",
               "#Nifty #Sensex #ClosingBell #StockMarket #Vishleshak"]
