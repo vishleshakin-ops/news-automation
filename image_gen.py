@@ -5,6 +5,7 @@ Vishleshak Market Brief theme (deep purple → navy). Poppins typography (bundle
 Saves JPEG to static/posts/. Instagram requires JPEG; PNG is auto-converted.
 """
 import os
+import re
 import base64
 import textwrap
 
@@ -205,10 +206,13 @@ def generate_post_image(title, time_label, body_lines, filename):
                 y += 50
             y += 10
         else:
-            for wrapped in textwrap.wrap(text, width=36) or [""]:
-                d.text((PAD, y), wrapped, font=_font(34, "medium"), fill=WHITE)
-                y += 48
-            y += 10
+            # Numbered news headlines render smaller so the FULL text fits (no truncation).
+            is_news = bool(re.match(r"^\d+\.\s", text))
+            fsize, lh, ww = (29, 40, 46) if is_news else (34, 48, 36)
+            for wrapped in textwrap.wrap(text, width=ww) or [""]:
+                d.text((PAD, y), wrapped, font=_font(fsize, "medium"), fill=WHITE)
+                y += lh
+            y += 8 if is_news else 10
 
     # ── Footer band ──
     fy = H - 150
