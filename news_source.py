@@ -9,6 +9,10 @@ import requests
 from datetime import datetime, timedelta
 
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+# Cheap model for editorial headline SELECTION (not rewriting — keeps facts intact).
+# Haiku 4.5 = this account's available gen (older 3.x models return 404).
+CURATION_MODEL = os.getenv("CURATION_MODEL", "claude-haiku-4-5")
 
 INDIAN_FINANCE_DOMAINS = ",".join([
     "economictimes.indiatimes.com",
@@ -129,16 +133,61 @@ def get_top_headlines(limit=10, hours_back=24):
 
     scored.sort(key=lambda x: x[0], reverse=True)
 
-    # Topic-dedup: skip a headline if it shares 3+ significant tokens with one already picked
+    # Topic-dedup: skip a headline if it shares 3+ significant tokens with one already picked.
+    # Build a slightly larger pool so the AI curator has good options to choose from.
+    pool_size = max(limit + 4, 14)
     picked, picked_tokens = [], []
     for _, _title, toks, h in scored:
         if any(len(toks & pt) >= 3 for pt in picked_tokens):
             continue
         picked.append(h)
         picked_tokens.append(toks)
-        if len(picked) >= limit:
+        if len(picked) >= pool_size:
             break
-    return picked
+
+    # Editorial AI selection (cheap Haiku): pick the `limit` most important, ranked.
+    # Selection-only (returns indices) — never rewrites, so facts stay intact. Falls back to heuristic.
+    if ANTHROPIC_API_KEY and len(picked) > limit:
+        ranked = _ai_rank(picked, limit)
+        if ranked:
+            return ranked
+    return picked[:limit]
+
+
+def _ai_rank(candidates, limit):
+    """Ask Haiku to pick the `limit` most important headlines (by index). Returns reordered
+    list, or None on any failure. Does NOT rewrite headlines — only selects/ranks."""
+    try:
+        listing = "\n".join(f"{i}. {c['title']}" for i, c in enumerate(candidates))
+        prompt = (
+            "You are the editor of an Indian stock-market daily brief. From the numbered "
+            "headlines below, choose the " + str(limit) + " MOST important for Indian investors "
+            "(prioritise market-moving news: RBI/SEBI, indices, big deals, results, IPOs, policy; "
+            "avoid minor/promotional items). Reply with ONLY the chosen numbers, comma-separated, "
+            "ranked most-important first. Example: 3,1,7,0,5\n\n" + listing
+        )
+        resp = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={"x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01",
+                     "content-type": "application/json"},
+            json={"model": CURATION_MODEL, "max_tokens": 60,
+                  "messages": [{"role": "user", "content": prompt}]},
+            timeout=20,
+        )
+        resp.raise_for_status()
+        text = resp.json()["content"][0]["text"]
+        idxs = [int(n) for n in re.findall(r"\d+", text)]
+        out, seen = [], set()
+        for i in idxs:
+            if 0 <= i < len(candidates) and i not in seen:
+                out.append(candidates[i])
+                seen.add(i)
+            if len(out) >= limit:
+                break
+        return out if len(out) >= min(limit, 3) else None
+    except Exception as e:
+        print(f"AI headline ranking failed (using heuristic): {e}")
+        return None
 
 
 def format_headlines_text(headlines, numbered=True):

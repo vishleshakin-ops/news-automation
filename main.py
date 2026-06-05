@@ -27,6 +27,9 @@ init_db()
 # API Keys
 ALPHA_VANTAGE_KEY = os.getenv("ALPHA_VANTAGE_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+# Brief model — Haiku 4.5 (cost-efficient + this account's available gen; older 3.x = 404).
+# Override via env to a Sonnet/Opus 4.x id for higher quality if desired.
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5")
 
 def call_anthropic(prompt: str) -> str:
     """Call Anthropic API directly via HTTP — no SDK, no proxies issue."""
@@ -36,7 +39,7 @@ def call_anthropic(prompt: str) -> str:
         "content-type": "application/json"
     }
     payload = {
-        "model": "claude-3-5-sonnet-20241022",
+        "model": ANTHROPIC_MODEL,
         "max_tokens": 1024,
         "messages": [{"role": "user", "content": prompt}]
     }
