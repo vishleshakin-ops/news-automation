@@ -159,11 +159,12 @@ LC_GOLD = (248, 226, 150)      # pale gold (title)
 LC_NUM = (245, 205, 95)        # number gold
 LC_ROW = (20, 58, 150)         # row fill
 LC_BORDER = (96, 150, 225)     # row border
-LC_DESC = (240, 244, 252)      # description text — BRIGHTENED to near-white
+LC_DESC = (255, 255, 255)      # description text — PURE WHITE for maximum clarity
 LC_TOPBAR = (247, 197, 47)     # gold top bar
 LC_FOOTER = (8, 12, 34)
 LC_GREEN = (76, 224, 140)      # bright green for gainers
 LC_RED = (255, 100, 110)       # bright red for losers
+LC_CYAN = (100, 220, 255)      # bright cyan for insights/secondary
 
 
 def _fit_text(d, text, font, maxw):
@@ -222,10 +223,10 @@ def generate_list_card(tag, title1, title2, subtitle, items, filename, brand_not
     y_pos = 388
     d.text((PAD, y_pos), subtitle, font=_font(31, "regular"), fill=LC_DESC)
 
-    # Optional banner (global snapshot, etc.) — bright white text
+    # Optional banner (global snapshot, etc.) — bright white BOLD text
     if banner:
         y_pos += 60
-        d.text((PAD, y_pos), banner, font=_font(24, "regular"), fill=WHITE)
+        d.text((PAD, y_pos), banner, font=_font(24, "bold"), fill=WHITE)
 
     # Numbered rows
     items = items[:10]
@@ -236,7 +237,7 @@ def generate_list_card(tag, title1, title2, subtitle, items, filename, brand_not
     y = top
     num_font = _font(34, "bold")
     it_font = _font(29, "bold")
-    de_font = _font(22, "regular")
+    de_font = _font(22, "bold")  # BOLD for crystal-clear readability
     for i, item_data in enumerate(items, 1):
         # Handle both 2-tuple (title, desc) and 3-tuple (title, desc, color)
         if len(item_data) == 3:
