@@ -151,6 +151,14 @@ def _arrow(pct):
     return "📈" if pct >= 0 else "📉"
 
 
+def _short(text, n=58):
+    """Truncate at a word boundary with an ellipsis (no mid-word cuts on the card)."""
+    text = text.strip()
+    if len(text) <= n:
+        return text
+    return text[:n].rsplit(" ", 1)[0].rstrip(",.;:-") + "…"
+
+
 # ----------------------------------------------------------------------------
 # THE 5 POST GENERATORS  → each returns dict {title, time_label, fb_text, ig_lines}
 # ----------------------------------------------------------------------------
@@ -182,7 +190,7 @@ def post_premarket():
     fb_text = "\n".join(lines)
     ig_lines = ([f"Nifty: {_fmt(nifty['price'])} ({nifty['pct']:+.2f}%)"] if nifty else []) + \
                ([f"Sensex: {_fmt(sensex['price'])} ({sensex['pct']:+.2f}%)"] if sensex else []) + \
-               [""] + [f"{i}. {h['title'][:60]}" for i, h in enumerate(headlines[:5], 1)]
+               [""] + [f"{i}. {_short(h['title'])}" for i, h in enumerate(headlines[:5], 1)]
     return {"title": "Pre-Market Watchlist", "time_label": f"9:00 AM • {_today_str()}",
             "fb_text": fb_text, "ig_lines": ig_lines}
 
@@ -206,7 +214,7 @@ def post_closing():
     fb_text = "\n".join(lines)
     ig_lines = ([f"{_arrow(nifty['pct'])} Nifty: {_fmt(nifty['price'])} ({nifty['pct']:+.2f}%)"] if nifty else []) + \
                ([f"{_arrow(sensex['pct'])} Sensex: {_fmt(sensex['price'])} ({sensex['pct']:+.2f}%)"] if sensex else []) + \
-               [""] + [f"{i}. {h['title'][:60]}" for i, h in enumerate(headlines[:5], 1)]
+               [""] + [f"{i}. {_short(h['title'])}" for i, h in enumerate(headlines[:5], 1)]
     return {"title": "Closing Market Summary", "time_label": f"4:00 PM • {_today_str()}",
             "fb_text": fb_text, "ig_lines": ig_lines}
 
